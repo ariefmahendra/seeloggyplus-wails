@@ -2,9 +2,11 @@ package logger
 
 import (
 	"github.com/rs/zerolog"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -14,10 +16,15 @@ var logFile *os.File
 func InitLogger() {
 	var err error
 
-	file, err := os.OpenFile("seeloggyplus.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	configDir, err := os.UserConfigDir()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error getting user config dir: %v", err)
 	}
+	appConfigDir := filepath.Join(configDir, "seeloggyplus/logs")
+	if err := os.MkdirAll(appConfigDir, 0755); err != nil {
+		log.Fatalf("Error creating config dir: %v", err)
+	}
+	logPath := filepath.Join(appConfigDir, "seeloggyplus.log")
 
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        os.Stdout,
@@ -30,7 +37,13 @@ func InitLogger() {
 		},
 	}
 
-	multiWriter := io.MultiWriter(consoleWriter, file)
+	multiWriter := io.MultiWriter(consoleWriter, &lumberjack.Logger{
+		Filename:   logPath,
+		MaxSize:    10,   // max size in MB
+		MaxBackups: 3,    // Max number of old log files to keep
+		MaxAge:     28,   // Max age in days to keep a log file
+		Compress:   true, // Compress old log files
+	})
 
 	appLogger = zerolog.New(multiWriter).
 		Level(zerolog.DebugLevel).
