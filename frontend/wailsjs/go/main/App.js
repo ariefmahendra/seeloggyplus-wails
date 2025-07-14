@@ -6,6 +6,10 @@ export function AddServer(arg1) {
   return window['go']['main']['App']['AddServer'](arg1);
 }
 
+export function CancelRequest(arg1) {
+  return window['go']['main']['App']['CancelRequest'](arg1);
+}
+
 export function DeleteServer(arg1) {
   return window['go']['main']['App']['DeleteServer'](arg1);
 }
@@ -16,6 +20,10 @@ export function GetServerById(arg1) {
 
 export function ListServers() {
   return window['go']['main']['App']['ListServers']();
+}
+
+export function TestConnection(arg1, arg2) {
+  return window['go']['main']['App']['TestConnection'](arg1, arg2);
 }
 
 export function UpdateServer(arg1) {

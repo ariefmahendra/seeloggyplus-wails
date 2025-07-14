@@ -21,13 +21,12 @@ type ConnectionType string
 
 const (
 	SFTP ConnectionType = "sftp"
-	FTP  ConnectionType = "ftp"
 	SCP  ConnectionType = "scp"
 )
 
 func (ct ConnectionType) IsValid() error {
 	switch ct {
-	case SFTP, FTP, SCP:
+	case SFTP, SCP:
 		return nil
 	}
 	return fmt.Errorf("invalid connection type: %s", string(ct))

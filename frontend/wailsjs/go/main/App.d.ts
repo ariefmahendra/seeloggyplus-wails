@@ -4,10 +4,14 @@ import {dto} from '../models';
 
 export function AddServer(arg1:dto.ServerCreateRequest):Promise<dto.ServerResponse>;
 
+export function CancelRequest(arg1:string):Promise<void>;
+
 export function DeleteServer(arg1:string):Promise<void>;
 
 export function GetServerById(arg1:string):Promise<dto.ServerResponse>;
 
 export function ListServers():Promise<Array<dto.ServerResponse>>;
+
+export function TestConnection(arg1:string,arg2:dto.ServerCreateRequest):Promise<void>;
 
 export function UpdateServer(arg1:dto.ServerUpdateRequest):Promise<void>;

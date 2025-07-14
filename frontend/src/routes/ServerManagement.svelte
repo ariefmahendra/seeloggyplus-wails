@@ -5,12 +5,14 @@
     import Input from '../components/common/Input.svelte';
     import Spinner from '../components/common/Spinner.svelte';
     import {
-        DeleteServer,
         AddServer,
+        CancelRequest,
+        DeleteServer,
         ListServers,
+        TestConnection,
         UpdateServer
     } from '../../wailsjs/go/main/App';
-    import { dto } from '../../wailsjs/go/models';
+    import {dto} from '../../wailsjs/go/models';
 
     type serverCreateRequest = dto.ServerCreateRequest;
     type serverResponse = dto.ServerResponse;
@@ -27,15 +29,18 @@
     let searchTerm = '';
     type ModalStatus = 'idle' | 'saving' | 'deleting' | 'testing';
     let modalStatus: ModalStatus = 'idle';
+
+    let currentTestRequestID: string | null = null;
+
     let testMessage = '';
+    let testMessageType: 'success' | 'error' = 'success';
 
     const connectionTypes = [
-        { value: 'sftp', label: 'SFTP (SSH File Transfer Protocol)', icon: 'ri-folder-shield-2-line' },
-        { value: 'ftp', label: 'FTP (File Transfer Protocol)', icon: 'ri-folder-transfer-line' },
-        { value: 'scp', label: 'SCP (Secure Copy Protocol)', icon: 'ri-file-copy-2-line' }
+        {value: 'sftp', label: 'SFTP (SSH File Transfer Protocol)', icon: 'ri-folder-shield-2-line'},
+        {value: 'scp', label: 'SCP (Secure Copy Protocol)', icon: 'ri-file-copy-2-line'}
     ];
 
-    async function refreshServers(){
+    async function refreshServers() {
         try {
             const fetchedServers = await ListServers();
             servers = fetchedServers === null ? [] : fetchedServers;
@@ -83,19 +88,45 @@
 
         modalStatus = 'testing';
         testMessage = 'Attempting to connect...';
+        testMessageType = 'success';
+        currentTestRequestID = crypto.randomUUID();
 
         try {
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            const payload: serverCreateRequest = {
+                name: editingServer.name,
+                address: editingServer.address,
+                port: editingServer.port,
+                user: editingServer.user,
+                password: editingServer.password,
+                type: editingServer.type,
+            }
 
-            if (Math.random() > 0.3) {
+            await TestConnection(currentTestRequestID, payload);
+
+            if (modalStatus === 'testing') {
                 testMessage = '✅ Connection successful!';
-            } else {
-                console.error('Test connection failed');
+                testMessageType = 'success';
             }
         } catch (e: any) {
-            testMessage = `❌ ${e.message || 'An unknown error occurred.'}`;
+            if (modalStatus === 'testing') {
+                testMessage = `❌ ${e}`;
+                testMessageType = 'error';
+                console.error('Failed to test connection', e);
+            }
         } finally {
             modalStatus = 'idle';
+            currentTestRequestID = null;
+            setTimeout(() => (testMessage = ''), 5000);
+        }
+    }
+
+    function cancelTestConnection() {
+        if (currentTestRequestID) {
+            console.log(`Cancelling request: ${currentTestRequestID}`);
+            CancelRequest(currentTestRequestID);
+            modalStatus = 'idle';
+            testMessage = 'Connection test cancelled.';
+            testMessageType = 'error';
         }
     }
 
@@ -105,9 +136,13 @@
         modalStatus = 'saving';
         try {
             if ('id' in editingServer && editingServer.id) {
-                await UpdateServer(editingServer as serverUpdateRequest);
+                const payload = editingServer as serverUpdateRequest;
+                payload.port = Number(payload.port);
+                await UpdateServer(payload);
             } else {
-                await AddServer(editingServer as serverCreateRequest);
+                const payload = editingServer as serverCreateRequest;
+                payload.port = Number(payload.port);
+                await AddServer(payload);
             }
 
             await refreshServers();
@@ -128,7 +163,7 @@
             await DeleteServer(serverToDelete.id);
             await refreshServers();
             closeModal();
-        } catch (e){
+        } catch (e) {
             console.error('Failed to delete server', e);
         } finally {
             modalStatus = 'idle';
@@ -137,23 +172,23 @@
     }
 
     function openAddModal() {
-        editingServer = new dto.ServerCreateRequest();
-        editingServer.name = '';
-        editingServer.address = '';
-        editingServer.port = 22;
-        editingServer.user = '';
-        editingServer.password = '';
-        editingServer.type = 'sftp';
+        editingServer = new dto.ServerCreateRequest({
+            name: '',
+            address: '',
+            port: 22,
+            user: '',
+            password: '',
+            type: 'sftp'
+        });
+
         originalServerState = null;
         showModal = true;
+        testMessage = '';
     }
 
     function openEditModal(server: serverResponse) {
-        const serverToEdit = new dto.ServerUpdateRequest();
-        Object.assign(serverToEdit, server);
-        editingServer = serverToEdit;
-
-        originalServerState = JSON.stringify(serverToEdit);
+        editingServer = dto.ServerUpdateRequest.createFrom(server);
+        originalServerState = JSON.stringify(editingServer);
         showModal = true;
     }
 
@@ -280,7 +315,7 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
         <div class="w-full max-w-lg rounded-lg bg-gray-800 p-6 shadow-xl">
             <h2 class="mb-6 text-2xl font-bold text-white">
-                {'id' in editingServer && editingServer.id? 'Edit Server' : 'Add Server'}
+                {'id' in editingServer && editingServer.id ? 'Edit Server' : 'Add Server'}
             </h2>
             <form on:submit|preventDefault={saveServer} class="space-y-4">
                 <div>
@@ -308,10 +343,10 @@
                 <div>
                     <label for="type" class="mb-2 block text-sm font-medium text-gray-300">Connection Type</label>
                     <Select
-                        id="type"
-                        bind:value={editingServer.type}
-                        options={connectionTypes}
-                        required
+                            id="type"
+                            bind:value={editingServer.type}
+                            options={connectionTypes}
+                            required
                     />
                 </div>
                 <div class="flex items-center justify-end space-x-3 pt-4">
@@ -321,15 +356,23 @@
                             disabled={modalStatus !== 'idle' || !isFormValid}
                             class="bg-gray-700 hover:bg-gray-600 w-48 flex justify-center items-center gap-2 disabled:background-gray-600/50 disabled:cursor-not-allowed"
                     >
-                        {#if modalStatus === 'testing'}
-                            <Spinner className="w-5 h-5" />
-                            <span>Testing...</span>
-                        {:else}
-                            <i class="ri-plug-line w-5 h-5"/>
-                            <span>Test Connection</span>
-                        {/if}
+                        <Button
+                                type="button"
+                                on:click="{modalStatus === 'testing' ? cancelTestConnection : testConnection}"
+                                disabled={modalStatus === 'saving' || modalStatus === 'deleting' || (modalStatus === 'idle' && !isFormValid)}
+                                class="flex min-w-[180px] justify-center items-center gap-2 transition-colors duration-200 {modalStatus === 'testing' ? '!bg-red-600 hover:!bg-red-700' : 'bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed'}"
+                        >
+                            {#if modalStatus === 'testing'}
+                                <i class="ri-close-line w-5 h-5"/>
+                                <span>Cancel Test</span>
+                            {:else}
+                                <i class="ri-plug-line w-5 h-5"/>
+                                <span>Test Connection</span>
+                            {/if}
+                        </Button>
                     </Button>
-                    <Button type="button" on:click={closeModal} class="!bg-gray-600 hover:!bg-gray-500"
+                    <Button type="button"
+                            on:click={closeModal} class="!bg-gray-600 hover:!bg-gray-500"
                             disabled={modalStatus !== 'idle'}>Cancel
                     </Button>
                     <Button type="submit"

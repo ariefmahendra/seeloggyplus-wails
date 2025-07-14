@@ -6,20 +6,27 @@ import (
 	"seeloggyplus/backend/dto"
 	"seeloggyplus/backend/handler"
 	"seeloggyplus/backend/logger"
+	"sync"
 )
 
 // App struct
 type App struct {
-	ctx    context.Context
-	db     *sql.DB
-	Server *handler.ServerHandler `json:"-"`
+	ctx        context.Context
+	db         *sql.DB
+	Server     *handler.ServerHandler     `json:"-"`
+	Connection *handler.ConnectionHandler `json:"-"`
+
+	cancellableRequests   map[string]context.CancelFunc
+	cancellableRequestsMu sync.Mutex
 }
 
 // NewApp creates a new App application struct
-func NewApp(db *sql.DB, server *handler.ServerHandler) *App {
+func NewApp(db *sql.DB, server *handler.ServerHandler, connection *handler.ConnectionHandler) *App {
 	return &App{
-		db:     db,
-		Server: server,
+		db:                  db,
+		Server:              server,
+		Connection:          connection,
+		cancellableRequests: make(map[string]context.CancelFunc),
 	}
 }
 
@@ -62,4 +69,36 @@ func (a *App) DeleteServer(id string) error {
 
 func (a *App) GetServerById(id string) (*dto.ServerResponse, error) {
 	return a.Server.GetServerById(a.ctx, id)
+}
+
+func (a *App) TestConnection(requestID string, payload dto.ServerCreateRequest) error {
+	ctx, cancel := context.WithCancel(a.ctx)
+
+	a.cancellableRequestsMu.Lock()
+	a.cancellableRequests[requestID] = cancel
+	a.cancellableRequestsMu.Unlock()
+
+	defer func() {
+		a.cancellableRequestsMu.Lock()
+		delete(a.cancellableRequests, requestID)
+		a.cancellableRequestsMu.Unlock()
+		log := logger.Get()
+		log.Info().Str("requestID", requestID).Msg("Cleaned up cancellable request")
+	}()
+
+	return a.Connection.TestConnection(ctx, &payload)
+}
+
+func (a *App) CancelRequest(requestID string) {
+	a.cancellableRequestsMu.Lock()
+	defer a.cancellableRequestsMu.Unlock()
+
+	log := logger.Get()
+	if cancel, ok := a.cancellableRequests[requestID]; ok {
+		log.Info().Str("requestID", requestID).Msg("Cancelling request")
+		cancel()
+		delete(a.cancellableRequests, requestID)
+	} else {
+		log.Warn().Str("requestID", requestID).Msg("Attempted to cancel a request that does not exist or is already completed")
+	}
 }

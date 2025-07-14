@@ -32,10 +32,12 @@ func main() {
 	serverRepo := repository.NewServerRepository(db)
 
 	serverUC := usecase.NewServerUseCase(serverRepo)
+	connectionUC := usecase.NewConnectionUseCase()
 
 	serverHandler := handler.NewServerHandler(serverUC)
+	connectionHandler := handler.NewConnectionHandler(connectionUC)
 
-	app := NewApp(db, serverHandler)
+	app := NewApp(db, serverHandler, connectionHandler)
 
 	err = wails.Run(&options.App{
 		Title:  "seeloggyplus",
