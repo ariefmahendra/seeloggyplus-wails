@@ -26,25 +26,27 @@ func InitLogger() {
 	}
 	logPath := filepath.Join(appConfigDir, "seeloggyplus.log")
 
-	consoleWriter := zerolog.ConsoleWriter{
-		Out:        os.Stdout,
-		TimeFormat: time.RFC3339,
-		PartsOrder: []string{
-			zerolog.TimestampFieldName,
-			zerolog.LevelFieldName,
-			zerolog.CallerFieldName,
-			zerolog.MessageFieldName,
-		},
-	}
-
-	multiWriter := io.MultiWriter(consoleWriter, &lumberjack.Logger{
+	fileLogger := &lumberjack.Logger{
 		Filename:   logPath,
 		MaxSize:    10,   // max size in MB
 		MaxBackups: 3,    // Max number of old log files to keep
 		MaxAge:     28,   // Max age in days to keep a log file
 		Compress:   true, // Compress old log files
-	})
+	}
 
+	fileWriter := zerolog.ConsoleWriter{
+		Out:        fileLogger,
+		NoColor:    true,
+		TimeFormat: time.RFC3339,
+	}
+
+	consoleWriter := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: time.RFC3339,
+	}
+
+	multiWriter := io.MultiWriter(consoleWriter, fileWriter)
+	
 	appLogger = zerolog.New(multiWriter).
 		Level(zerolog.DebugLevel).
 		With().

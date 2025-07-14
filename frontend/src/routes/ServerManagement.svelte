@@ -1,6 +1,7 @@
 <script lang="ts">
     import {onMount} from 'svelte';
     import Button from '../components/common/Button.svelte';
+    import Select from '../components/common/Select.svelte';
     import Input from '../components/common/Input.svelte';
     import Spinner from '../components/common/Spinner.svelte';
     import {
@@ -28,6 +29,12 @@
     let modalStatus: ModalStatus = 'idle';
     let testMessage = '';
 
+    const connectionTypes = [
+        { value: 'sftp', label: 'SFTP (SSH File Transfer Protocol)', icon: 'ri-folder-shield-2-line' },
+        { value: 'ftp', label: 'FTP (File Transfer Protocol)', icon: 'ri-folder-transfer-line' },
+        { value: 'scp', label: 'SCP (Secure Copy Protocol)', icon: 'ri-file-copy-2-line' }
+    ];
+
     async function refreshServers(){
         try {
             const fetchedServers = await ListServers();
@@ -50,7 +57,8 @@
         editingServer.address?.trim() !== '' &&
         editingServer.port !== 0 &&
         editingServer.user?.trim() !== '' &&
-        editingServer.password?.trim() !== '';
+        editingServer.password?.trim() !== '' &&
+        !!editingServer.type;
 
     $: isEditing = !!(editingServer && 'id' in editingServer && editingServer.id);
 
@@ -135,6 +143,7 @@
         editingServer.port = 22;
         editingServer.user = '';
         editingServer.password = '';
+        editingServer.type = 'sftp';
         originalServerState = null;
         showModal = true;
     }
@@ -235,6 +244,10 @@
                                 <span class="block text-gray-400">User</span>
                                 <span class="font-mono text-gray-200">{server.user}</span>
                             </div>
+                            <div>
+                                <span class="block text-gray-400">Type</span>
+                                <span class="font-mono uppercase text-gray-200">{server.type}</span>
+                            </div>
                         </div>
                     </div>
                 {/each}
@@ -291,6 +304,15 @@
                 <div>
                     <label for="password" class="mb-2 block text-sm font-medium text-gray-300">Password</label>
                     <Input id="password" type="password" bind:value={editingServer.password}/>
+                </div>
+                <div>
+                    <label for="type" class="mb-2 block text-sm font-medium text-gray-300">Connection Type</label>
+                    <Select
+                        id="type"
+                        bind:value={editingServer.type}
+                        options={connectionTypes}
+                        required
+                    />
                 </div>
                 <div class="flex items-center justify-end space-x-3 pt-4">
                     <Button

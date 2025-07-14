@@ -6,6 +6,7 @@ export namespace dto {
 	    port?: number;
 	    user?: string;
 	    password?: string;
+	    type?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerCreateRequest(source);
@@ -18,6 +19,7 @@ export namespace dto {
 	        this.port = source["port"];
 	        this.user = source["user"];
 	        this.password = source["password"];
+	        this.type = source["type"];
 	    }
 	}
 	export class ServerResponse {
@@ -29,6 +31,7 @@ export namespace dto {
 	    password: string;
 	    createdAt: string;
 	    updatedAt: string;
+	    type: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerResponse(source);
@@ -44,6 +47,7 @@ export namespace dto {
 	        this.password = source["password"];
 	        this.createdAt = source["createdAt"];
 	        this.updatedAt = source["updatedAt"];
+	        this.type = source["type"];
 	    }
 	}
 	export class ServerUpdateRequest {
@@ -53,6 +57,7 @@ export namespace dto {
 	    port?: number;
 	    user?: string;
 	    password?: string;
+	    type?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerUpdateRequest(source);
@@ -66,6 +71,7 @@ export namespace dto {
 	        this.port = source["port"];
 	        this.user = source["user"];
 	        this.password = source["password"];
+	        this.type = source["type"];
 	    }
 	}
 
