@@ -10,7 +10,7 @@ import (
 	"seeloggyplus/backend/repository"
 )
 
-type ServerUseCase interface {
+type ServerUsecase interface {
 	AddServer(ctx context.Context, payload *dto.ServerCreateRequest) (*dto.ServerResponse, error)
 	UpdateServer(ctx context.Context, payload *dto.ServerUpdateRequest) error
 	RemoveServer(ctx context.Context, id string) error
@@ -19,15 +19,15 @@ type ServerUseCase interface {
 	Migrate(ctx context.Context) error
 }
 
-type serverUseCase struct {
+type serverUsecaseImpl struct {
 	repo repository.ServerRepository
 }
 
-func NewServerUseCase(repo repository.ServerRepository) ServerUseCase {
-	return &serverUseCase{repo: repo}
+func NewServerUseCase(repo repository.ServerRepository) ServerUsecase {
+	return &serverUsecaseImpl{repo: repo}
 }
 
-func (s *serverUseCase) Migrate(ctx context.Context) error {
+func (s *serverUsecaseImpl) Migrate(ctx context.Context) error {
 	log := logger.Get()
 	log.Info().Msg("Attempting to migrate server table")
 
@@ -40,7 +40,7 @@ func (s *serverUseCase) Migrate(ctx context.Context) error {
 	return nil
 }
 
-func (s *serverUseCase) AddServer(ctx context.Context, payload *dto.ServerCreateRequest) (*dto.ServerResponse, error) {
+func (s *serverUsecaseImpl) AddServer(ctx context.Context, payload *dto.ServerCreateRequest) (*dto.ServerResponse, error) {
 	log := logger.Get()
 	serverID := uuid.New().String()
 	log.Info().Str("name", payload.Name).Str("generated_id", serverID).Msg("Processing AddServer use case")
@@ -84,7 +84,7 @@ func (s *serverUseCase) AddServer(ctx context.Context, payload *dto.ServerCreate
 	return &serverResponse, nil
 }
 
-func (s *serverUseCase) UpdateServer(ctx context.Context, payload *dto.ServerUpdateRequest) error {
+func (s *serverUsecaseImpl) UpdateServer(ctx context.Context, payload *dto.ServerUpdateRequest) error {
 	log := logger.Get()
 	log.Info().Str("id", payload.ID).Msg("Processing UpdateServer use case")
 
@@ -124,7 +124,7 @@ func (s *serverUseCase) UpdateServer(ctx context.Context, payload *dto.ServerUpd
 	return nil
 }
 
-func (s *serverUseCase) RemoveServer(ctx context.Context, id string) error {
+func (s *serverUsecaseImpl) RemoveServer(ctx context.Context, id string) error {
 	log := logger.Get()
 	log.Info().Str("id", id).Msg("Processing RemoveServer use case")
 
@@ -137,7 +137,7 @@ func (s *serverUseCase) RemoveServer(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *serverUseCase) ListServers(ctx context.Context) ([]*dto.ServerResponse, error) {
+func (s *serverUsecaseImpl) ListServers(ctx context.Context) ([]*dto.ServerResponse, error) {
 	log := logger.Get()
 	log.Info().Msg("Processing ListServers use case")
 
@@ -167,7 +167,7 @@ func (s *serverUseCase) ListServers(ctx context.Context) ([]*dto.ServerResponse,
 	return listServers, nil
 }
 
-func (s *serverUseCase) GetBydId(ctx context.Context, id string) (*dto.ServerResponse, error) {
+func (s *serverUsecaseImpl) GetBydId(ctx context.Context, id string) (*dto.ServerResponse, error) {
 	log := logger.Get()
 	log.Info().Str("id", id).Msg("Processing GetBydId use case")
 

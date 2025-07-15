@@ -8,10 +8,10 @@ import (
 )
 
 type ServerHandler struct {
-	serverUC usecase.ServerUseCase
+	serverUC usecase.ServerUsecase
 }
 
-func NewServerHandler(uc usecase.ServerUseCase) *ServerHandler {
+func NewServerHandler(uc usecase.ServerUsecase) *ServerHandler {
 	return &ServerHandler{serverUC: uc}
 }
 
