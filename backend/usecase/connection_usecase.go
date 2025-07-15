@@ -2,11 +2,12 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"net"
 	"seeloggyplus/backend/custom_error"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -15,26 +16,23 @@ import (
 	"seeloggyplus/backend/logger"
 )
 
-// ConnectionUseCase defines the interface for the connection use case.
 type ConnectionUseCase interface {
 	TestConnection(ctx context.Context, req *dto.ServerCreateRequest) error
 }
 
 type connectionUseCase struct{}
 
-// NewConnectionUseCase creates a new instance of ConnectionUseCase.
 func NewConnectionUseCase() ConnectionUseCase {
 	return &connectionUseCase{}
 }
 
-// TestConnection attempts to establish a connection to a server based on its type.
 func (uc *connectionUseCase) TestConnection(ctx context.Context, req *dto.ServerCreateRequest) error {
 	log := logger.Get()
 	log.Info().Str("address", req.Address).Int("port", req.Port).Str("type", req.Type).Msg("Attempting to test connection")
 
 	connectionType := entity.ConnectionType(req.Type)
 	if err := connectionType.IsValid(); err != nil {
-		log.Warn().Err(err).Str("type", req.Type).Msg("Invalid connection type provided for testing")
+		log.Warn().Err(err).Str("type", req.Type).Msg("Invalid connection type provided")
 		return &custom_error.UserFacingError{
 			UserMessage:   "Invalid Connection Type Provided.",
 			InternalError: err,
@@ -48,7 +46,6 @@ func (uc *connectionUseCase) TestConnection(ctx context.Context, req *dto.Server
 		return uc.testSSHConnection(ctx, address, req.User, req.Password)
 	default:
 		internalErr := fmt.Errorf("connection type '%s' is not supported for testing", connectionType)
-
 		return &custom_error.UserFacingError{
 			UserMessage:   fmt.Sprintf("Connection Type '%s' Is Not Supported.", connectionType),
 			InternalError: internalErr,
@@ -56,77 +53,95 @@ func (uc *connectionUseCase) TestConnection(ctx context.Context, req *dto.Server
 	}
 }
 
-// testSSHConnection performs an SSH connection test.
 func (uc *connectionUseCase) testSSHConnection(ctx context.Context, address, user, password string) error {
 	log := logger.Get()
 
-	sshConfig := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	type handshakeResult struct {
+		conn ssh.Conn
+		err  error
 	}
+	resultChan := make(chan handshakeResult, 1)
 
-	log.Info().Str("user", user).Str("address", address).Msg("Dialing SSH server with context")
-
-	dialer := net.Dialer{
-		Timeout: 5 * time.Second,
-	}
-
-	conn, err := dialer.DialContext(ctx, "tcp", address)
-	if err != nil {
-		log.Error().Err(err).Str("address", address).Msg("Failed to dial server")
-		// Jika dial gagal, periksa apakah itu karena pembatalan.
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return uc.normalizeSSHConnectionError(err)
+	// Launch the blocking operation in a separate goroutine.
+	go func() {
+		sshConfig := &ssh.ClientConfig{
+			User: user,
+			Auth: []ssh.AuthMethod{
+				ssh.Password(password),
+			},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		}
-		return uc.normalizeSSHConnectionError(err)
-	}
 
-	c, _, _, err := ssh.NewClientConn(conn, address, sshConfig)
-	if err != nil {
-		// ==================================================================
-		// LOGIKA UTAMA UNTUK MENGATASI RACE CONDITION
-		// ==================================================================
-		// Periksa status context SEKARANG, setelah error terjadi.
-		// ctx.Err() akan non-nil jika context telah dibatalkan.
-		if ctx.Err() != nil {
-			// Jika context dibatalkan, prioritaskan error pembatalan.
-			log.Warn().Err(err).Msg("SSH handshake failed, but context was already canceled. Prioritizing cancellation error.")
-			// Kirim error dari context agar dinormalisasi dengan benar.
-			return uc.normalizeSSHConnectionError(ctx.Err())
+		dialer := net.Dialer{Timeout: 5 * time.Second}
+		conn, err := dialer.DialContext(ctx, "tcp", address)
+		if err != nil {
+			resultChan <- handshakeResult{nil, err}
+			return
 		}
-		// ==================================================================
 
-		// Jika context TIDAK dibatalkan, maka ini adalah error handshake yang sah.
-		log.Error().Err(err).Str("address", address).Msg("SSH handshake failed")
-		return uc.normalizeSSHConnectionError(err)
+		sshConn, _, _, err := ssh.NewClientConn(conn, address, sshConfig)
+
+		select {
+		case <-ctx.Done():
+			log.Info().Msg("Goroutine detected context cancellation, abandoning result.")
+			if sshConn != nil {
+				if closeErr := sshConn.Close(); closeErr != nil {
+					log.Warn().Err(closeErr).Msg("Error while closing SSH connection in goroutine")
+				}
+			}
+			return // Exit silently.
+		default:
+			resultChan <- handshakeResult{sshConn, err}
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Info().Msg("Context cancelled by user, test aborted.")
+		return uc.normalizeSSHConnectionError(ctx.Err())
+
+	case result := <-resultChan:
+		if result.err != nil {
+			log.Error().Err(result.err).Str("address", address).Msg("SSH operation failed")
+			return uc.normalizeSSHConnectionError(result.err)
+		}
+
+		defer func() {
+			if closeErr := result.conn.Close(); closeErr != nil {
+				log.Warn().Err(closeErr).Msg("Error while closing successful SSH connection")
+			}
+		}()
+		log.Info().Str("address", address).Msg("SSH connection  test successful")
+		return nil
 	}
-	defer c.Close()
-
-	log.Info().Str("address", address).Msg("SSH connection test successful")
-	return nil
 }
 
-// normalizeSSHConnectionError translates technical SSH custom_error into professional, user-friendly messages.
+// normalizeSSHConnectionError translates technical SSH errors into professional, user-friendly messages.
 func (uc *connectionUseCase) normalizeSSHConnectionError(err error) error {
-	originalError := err.Error()
 	var userMessage string
+	var opError *net.OpError
 
 	switch {
-	// Menambahkan "context canceled" ke pemeriksaan ini adalah kunci.
-	case strings.Contains(originalError, "i/o timeout") || strings.Contains(originalError, "context deadline exceeded") || strings.Contains(originalError, "context canceled"):
-		userMessage = "Connection Timed Out or Canceled."
-
-	case strings.Contains(originalError, "no common algorithm"):
-		userMessage = "Connection Failed: Server uses incompatible security algorithms."
-	case strings.Contains(originalError, "unable to authenticate") || strings.Contains(originalError, "permission denied"):
-		userMessage = "Authentication Failed: Please check your username and password."
-	case strings.Contains(originalError, "connection refused"):
-		userMessage = "Connection Refused: Please check the host address and port."
+	case errors.Is(err, context.Canceled):
+		userMessage = "Connection Test Canceled."
+	case errors.Is(err, context.DeadlineExceeded):
+		userMessage = "Connection Timed Out: Server is unreachable or a firewall is blocking the connection."
+	case errors.As(err, &opError):
+		var syscallErr syscall.Errno
+		if errors.As(opError.Err, &syscallErr) && errors.Is(syscallErr, syscall.ECONNREFUSED) {
+			userMessage = "Connection Refused: Please check the host address and port."
+		} else {
+			userMessage = "Network Error: Could not connect to the server."
+		}
 	default:
-		userMessage = "Connection Failed: An unexpected error occurred."
+		originalError := err.Error()
+		if strings.Contains(originalError, "no common algorithm") {
+			userMessage = "Connection Failed: Server uses incompatible security algorithms."
+		} else if strings.Contains(originalError, "unable to authenticate") || strings.Contains(originalError, "permission denied") {
+			userMessage = "Authentication Failed: Please check your username and password."
+		} else {
+			userMessage = "Connection Failed: An unexpected error occurred."
+		}
 	}
 
 	return &custom_error.UserFacingError{

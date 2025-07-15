@@ -34,6 +34,12 @@
 
     let testMessage = '';
     let testMessageType: 'success' | 'error' = 'success';
+    let modalErrorMessage = '';
+
+    function clearMessages(){
+        testMessage = '';
+        modalErrorMessage = '';
+    }
 
     const connectionTypes = [
         {value: 'sftp', label: 'SFTP (SSH File Transfer Protocol)', icon: 'ri-folder-shield-2-line'},
@@ -87,6 +93,7 @@
         if (!editingServer || modalStatus !== 'idle') return;
 
         modalStatus = 'testing';
+        clearMessages();
         testMessage = 'Attempting to connect...';
         testMessageType = 'success';
         currentTestRequestID = crypto.randomUUID();
@@ -106,17 +113,16 @@
             if (modalStatus === 'testing') {
                 testMessage = '✅ Connection successful!';
                 testMessageType = 'success';
+                setTimeout(() => clearMessages(), 3000);
             }
         } catch (e: any) {
             if (modalStatus === 'testing') {
                 testMessage = `❌ ${e}`;
                 testMessageType = 'error';
-                console.error('Failed to test connection', e);
             }
         } finally {
             modalStatus = 'idle';
             currentTestRequestID = null;
-            setTimeout(() => (testMessage = ''), 5000);
         }
     }
 
@@ -134,6 +140,7 @@
         if (!editingServer || modalStatus !== 'idle') return;
 
         modalStatus = 'saving';
+        modalErrorMessage = '';
         try {
             if ('id' in editingServer && editingServer.id) {
                 const payload = editingServer as serverUpdateRequest;
@@ -149,6 +156,7 @@
             closeModal();
         } catch (e) {
             console.error('Failed to save server', e);
+            modalErrorMessage = e;
         } finally {
             modalStatus = 'idle';
             editingServer = null;
@@ -318,58 +326,60 @@
                 {'id' in editingServer && editingServer.id ? 'Edit Server' : 'Add Server'}
             </h2>
             <form on:submit|preventDefault={saveServer} class="space-y-4">
-                <div>
-                    <label for="alias" class="mb-2 block text-sm font-medium text-gray-300">Alias / Name</label>
-                    <Input id="alias" bind:value={editingServer.name} placeholder="e.g., Production Server" required/>
-                </div>
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="col-span-2">
-                        <label for="host" class="mb-2 block text-sm font-medium text-gray-300">Host / IP</label>
-                        <Input id="host" bind:value={editingServer.address} placeholder="e.g., 192.168.1.1" required/>
+                <fieldset disabled="{modalStatus === 'testing' || modalStatus === 'saving'}">
+                    <div>
+                        <label for="alias" class="mb-2 block text-sm font-medium text-gray-300">Alias / Name</label>
+                        <Input id="alias" bind:value={editingServer.name} placeholder="e.g., Production Server" required/>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-2">
+                            <label for="host" class="mb-2 block text-sm font-medium text-gray-300">Host / IP</label>
+                            <Input id="host" bind:value={editingServer.address} placeholder="e.g., 192.168.1.1" required/>
+                        </div>
+                        <div>
+                            <label for="port" class="mb-2 block text-sm font-medium text-gray-300">Port</label>
+                            <Input id="port" type="number" bind:value={editingServer.port} required/>
+                        </div>
                     </div>
                     <div>
-                        <label for="port" class="mb-2 block text-sm font-medium text-gray-300">Port</label>
-                        <Input id="port" type="number" bind:value={editingServer.port} required/>
+                        <label for="user" class="mb-2 block text-sm font-medium text-gray-300">Username</label>
+                        <Input id="user" bind:value={editingServer.user} placeholder="e.g., root" required/>
                     </div>
-                </div>
-                <div>
-                    <label for="user" class="mb-2 block text-sm font-medium text-gray-300">Username</label>
-                    <Input id="user" bind:value={editingServer.user} placeholder="e.g., root" required/>
-                </div>
-                <div>
-                    <label for="password" class="mb-2 block text-sm font-medium text-gray-300">Password</label>
-                    <Input id="password" type="password" bind:value={editingServer.password}/>
-                </div>
-                <div>
-                    <label for="type" class="mb-2 block text-sm font-medium text-gray-300">Connection Type</label>
-                    <Select
-                            id="type"
-                            bind:value={editingServer.type}
-                            options={connectionTypes}
-                            required
-                    />
-                </div>
+                    <div>
+                        <label for="password" class="mb-2 block text-sm font-medium text-gray-300">Password</label>
+                        <Input id="password" type="password" bind:value={editingServer.password}/>
+                    </div>
+                    <div>
+                        <label for="type" class="mb-2 block text-sm font-medium text-gray-300">Connection Type</label>
+                        <Select
+                                id="type"
+                                bind:value={editingServer.type}
+                                options={connectionTypes}
+                                required
+                        />
+                    </div>
+                </fieldset>
+
+                {#if modalErrorMessage}
+                    <div class="rounded-md bg-red-900/50 p-3 text-center text-sm font-medium text-red-300">
+                        {modalErrorMessage}
+                    </div>
+                {/if}
+
                 <div class="flex items-center justify-end space-x-3 pt-4">
                     <Button
                             type="button"
-                            on:click={testConnection}
-                            disabled={modalStatus !== 'idle' || !isFormValid}
-                            class="bg-gray-700 hover:bg-gray-600 w-48 flex justify-center items-center gap-2 disabled:background-gray-600/50 disabled:cursor-not-allowed"
+                            on:click="{modalStatus === 'testing' ? cancelTestConnection : testConnection}"
+                            disabled={modalStatus === 'saving' || modalStatus === 'deleting' || (modalStatus === 'idle' && !isFormValid)}
+                            class="flex min-w-[180px] justify-center items-center gap-2 transition-colors duration-200 {modalStatus === 'testing' ? '!bg-red-600 hover:!bg-red-700' : 'bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed'}"
                     >
-                        <Button
-                                type="button"
-                                on:click="{modalStatus === 'testing' ? cancelTestConnection : testConnection}"
-                                disabled={modalStatus === 'saving' || modalStatus === 'deleting' || (modalStatus === 'idle' && !isFormValid)}
-                                class="flex min-w-[180px] justify-center items-center gap-2 transition-colors duration-200 {modalStatus === 'testing' ? '!bg-red-600 hover:!bg-red-700' : 'bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed'}"
-                        >
-                            {#if modalStatus === 'testing'}
-                                <i class="ri-close-line w-5 h-5"/>
-                                <span>Cancel Test</span>
-                            {:else}
-                                <i class="ri-plug-line w-5 h-5"/>
-                                <span>Test Connection</span>
-                            {/if}
-                        </Button>
+                        {#if modalStatus === 'testing'}
+                            <i class="ri-close-line w-5 h-5"/>
+                            <span>Cancel Test</span>
+                        {:else}
+                            <i class="ri-plug-line w-5 h-5"/>
+                            <span>Test Connection</span>
+                        {/if}
                     </Button>
                     <Button type="button"
                             on:click={closeModal} class="!bg-gray-600 hover:!bg-gray-500"
@@ -386,6 +396,7 @@
                         {/if}
                     </Button>
                 </div>
+                
                 {#if testMessage}
                     <p class="mt-2 text-center text-sm text-gray-400">{testMessage}</p>
                 {/if}
