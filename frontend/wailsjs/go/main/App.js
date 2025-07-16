@@ -10,12 +10,40 @@ export function CancelRequest(arg1) {
   return window['go']['main']['App']['CancelRequest'](arg1);
 }
 
+export function CloseAllSession() {
+  return window['go']['main']['App']['CloseAllSession']();
+}
+
+export function CloseSession(arg1) {
+  return window['go']['main']['App']['CloseSession'](arg1);
+}
+
+export function ConnectSession(arg1) {
+  return window['go']['main']['App']['ConnectSession'](arg1);
+}
+
 export function DeleteServer(arg1) {
   return window['go']['main']['App']['DeleteServer'](arg1);
 }
 
+export function GetListFiles(arg1, arg2) {
+  return window['go']['main']['App']['GetListFiles'](arg1, arg2);
+}
+
 export function GetServerById(arg1) {
   return window['go']['main']['App']['GetServerById'](arg1);
+}
+
+export function GetSession(arg1) {
+  return window['go']['main']['App']['GetSession'](arg1);
+}
+
+export function GetUserHomeDire() {
+  return window['go']['main']['App']['GetUserHomeDire']();
+}
+
+export function ListFiles(arg1) {
+  return window['go']['main']['App']['ListFiles'](arg1);
 }
 
 export function ListServers() {

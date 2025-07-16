@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"seeloggyplus/backend/dto"
+	"seeloggyplus/backend/entity"
 	"seeloggyplus/backend/handler"
 	"seeloggyplus/backend/logger"
 	"sync"
@@ -11,21 +12,26 @@ import (
 
 // App struct
 type App struct {
-	ctx        context.Context
-	db         *sql.DB
-	Server     *handler.ServerHandler     `json:"-"`
-	Connection *handler.ConnectionHandler `json:"-"`
+	ctx            context.Context
+	db             *sql.DB
+	Server         *handler.ServerHandler         `json:"-"`
+	Connection     *handler.ConnectionHandler     `json:"-"`
+	RemoteFile     *handler.RemoteFileHandler     `json:"-"`
+	LocalFile      *handler.LocalFileHandler      `json:"-"`
+	SessionManager *handler.SessionManagerHandler `json:"-"`
 
 	cancellableRequests   map[string]context.CancelFunc
 	cancellableRequestsMu sync.Mutex
 }
 
 // NewApp creates a new App application struct
-func NewApp(db *sql.DB, server *handler.ServerHandler, connection *handler.ConnectionHandler) *App {
+func NewApp(db *sql.DB, server *handler.ServerHandler, connection *handler.ConnectionHandler, remoteFile *handler.RemoteFileHandler, sessionManager *handler.SessionManagerHandler) *App {
 	return &App{
 		db:                  db,
 		Server:              server,
 		Connection:          connection,
+		RemoteFile:          remoteFile,
+		SessionManager:      sessionManager,
 		cancellableRequests: make(map[string]context.CancelFunc),
 	}
 }
@@ -51,6 +57,8 @@ func (a *App) Shutdown(ctx context.Context) {
 	}
 }
 
+// Server Management handler
+
 func (a *App) ListServers() ([]*dto.ServerResponse, error) {
 	return a.Server.ListServers(a.ctx)
 }
@@ -70,6 +78,8 @@ func (a *App) DeleteServer(id string) error {
 func (a *App) GetServerById(id string) (*dto.ServerResponse, error) {
 	return a.Server.GetServerById(a.ctx, id)
 }
+
+// Connection handler
 
 func (a *App) TestConnection(requestID string, payload dto.ServerCreateRequest) error {
 	ctx, cancel := context.WithCancel(a.ctx)
@@ -101,4 +111,38 @@ func (a *App) CancelRequest(requestID string) {
 	} else {
 		log.Warn().Str("requestID", requestID).Msg("Attempted to cancel a request that does not exist or is already completed")
 	}
+}
+
+// Remote File Handler
+
+func (a *App) GetListFiles(sessionID string, path string) ([]dto.FileInfo, error) {
+	return a.RemoteFile.GetListFiles(sessionID, path)
+}
+
+// Local File Handler
+
+func (a *App) ListFiles(path string) ([]dto.FileInfo, error) {
+	return a.LocalFile.ListFiles(path)
+}
+
+func (a *App) GetUserHomeDire() (string, error) {
+	return a.LocalFile.GetUserHomeDir()
+}
+
+// Session Manager Handler
+
+func (a *App) ConnectSession(server *dto.ServerSessionManagement) (string, error) {
+	return a.SessionManager.ConnectSession(a.ctx, server)
+}
+
+func (a *App) GetSession(sessionID string) (*entity.Session, bool) {
+	return a.SessionManager.GetSession(sessionID)
+}
+
+func (a *App) CloseSession(sessionID string) error {
+	return a.SessionManager.CloseSession(sessionID)
+}
+
+func (a *App) CloseAllSession() {
+	a.SessionManager.CloseAllSession()
 }

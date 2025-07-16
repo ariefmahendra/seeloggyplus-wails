@@ -3,12 +3,13 @@ package entity
 import (
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"seeloggyplus/backend/dto"
 	"seeloggyplus/backend/logger"
 )
 
 type Session struct {
 	ID         string
-	ServerInfo *Server
+	ServerInfo *dto.ServerSessionManagement
 	SSHClient  *ssh.Client
 	SFTPClient *sftp.Client
 }

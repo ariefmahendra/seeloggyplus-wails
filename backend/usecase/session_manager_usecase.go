@@ -5,31 +5,32 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
+	"seeloggyplus/backend/dto"
 	"seeloggyplus/backend/entity"
 	"seeloggyplus/backend/logger"
 	"seeloggyplus/backend/shared/util"
 	"sync"
 )
 
-type SessionManagerUsecase interface {
-	Connect(ctx context.Context, server *entity.Server) (string, error)
+type SessionManagerUC interface {
+	Connect(ctx context.Context, server *dto.ServerSessionManagement) (string, error)
 	GetSession(sessionID string) (*entity.Session, bool)
 	CloseSession(sessionID string) error
 	CloseAllSession()
 }
 
-type sessionManagerUsecaseImpl struct {
+type sessionManagerUCImpl struct {
 	sessions map[string]*entity.Session
 	mu       sync.RWMutex
 }
 
-func NewSessionManagerUsecase() SessionManagerUsecase {
-	return &sessionManagerUsecaseImpl{
+func NewSessionManagerUC() SessionManagerUC {
+	return &sessionManagerUCImpl{
 		sessions: make(map[string]*entity.Session),
 	}
 }
 
-func (uc *sessionManagerUsecaseImpl) Connect(ctx context.Context, server *entity.Server) (string, error) {
+func (uc *sessionManagerUCImpl) Connect(ctx context.Context, server *dto.ServerSessionManagement) (string, error) {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 
@@ -72,14 +73,14 @@ func (uc *sessionManagerUsecaseImpl) Connect(ctx context.Context, server *entity
 	return sessionID, nil
 }
 
-func (uc *sessionManagerUsecaseImpl) GetSession(sessionID string) (*entity.Session, bool) {
+func (uc *sessionManagerUCImpl) GetSession(sessionID string) (*entity.Session, bool) {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 	session, found := uc.sessions[sessionID]
 	return session, found
 }
 
-func (uc *sessionManagerUsecaseImpl) CloseSession(sessionID string) error {
+func (uc *sessionManagerUCImpl) CloseSession(sessionID string) error {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 	log := logger.Get()
@@ -93,7 +94,7 @@ func (uc *sessionManagerUsecaseImpl) CloseSession(sessionID string) error {
 	return session.Close()
 }
 
-func (uc *sessionManagerUsecaseImpl) CloseAllSession() {
+func (uc *sessionManagerUCImpl) CloseAllSession() {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 	log := logger.Get()

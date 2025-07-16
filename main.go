@@ -33,11 +33,21 @@ func main() {
 
 	serverUC := usecase.NewServerUseCase(serverRepo)
 	connectionUC := usecase.NewConnectionUseCase()
+	sessionManagerUC := usecase.NewSessionManagerUC()
+	remoteFileUC := usecase.NewRemoteFileUC(sessionManagerUC)
 
 	serverHandler := handler.NewServerHandler(serverUC)
 	connectionHandler := handler.NewConnectionHandler(connectionUC)
+	remoteFileHandler := handler.NewRemoteFileHandler(remoteFileUC)
+	sessionManagerHandler := handler.NewSessionManagerHandler(sessionManagerUC)
 
-	app := NewApp(db, serverHandler, connectionHandler)
+	app := NewApp(
+		db,
+		serverHandler,
+		connectionHandler,
+		remoteFileHandler,
+		sessionManagerHandler,
+	)
 
 	err = wails.Run(&options.App{
 		Title:  "seeloggyplus",

@@ -11,17 +11,17 @@ import (
 	"seeloggyplus/backend/shared/util"
 )
 
-type ConnectionUseCase interface {
+type ConnectionUC interface {
 	TestConnection(ctx context.Context, req *dto.ServerCreateRequest) error
 }
 
-type connectionUsecaseImpl struct{}
+type connectionUCImpl struct{}
 
-func NewConnectionUseCase() ConnectionUseCase {
-	return &connectionUsecaseImpl{}
+func NewConnectionUseCase() ConnectionUC {
+	return &connectionUCImpl{}
 }
 
-func (uc *connectionUsecaseImpl) TestConnection(ctx context.Context, req *dto.ServerCreateRequest) error {
+func (uc *connectionUCImpl) TestConnection(ctx context.Context, req *dto.ServerCreateRequest) error {
 	log := logger.Get()
 	log.Info().Str("address", req.Address).Int("port", req.Port).Str("type", req.Type).Msg("Attempting to test connection")
 

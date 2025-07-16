@@ -30,3 +30,13 @@ type ServerResponse struct {
 	UpdatedAt string `json:"updatedAt"`
 	Type      string `json:"type"`
 }
+
+type ServerSessionManagement struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Address  string `json:"address"`
+	Port     int    `json:"port"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Type     string `json:"type"`
+}

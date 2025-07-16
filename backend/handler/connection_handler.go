@@ -8,10 +8,10 @@ import (
 )
 
 type ConnectionHandler struct {
-	connectionUC usecase.ConnectionUseCase
+	connectionUC usecase.ConnectionUC
 }
 
-func NewConnectionHandler(uc usecase.ConnectionUseCase) *ConnectionHandler {
+func NewConnectionHandler(uc usecase.ConnectionUC) *ConnectionHandler {
 	return &ConnectionHandler{connectionUC: uc}
 }
 
