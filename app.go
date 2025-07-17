@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"seeloggyplus/backend/dto"
-	"seeloggyplus/backend/entity"
 	"seeloggyplus/backend/handler"
 	"seeloggyplus/backend/logger"
 	"sync"
@@ -132,11 +131,15 @@ func (a *App) GetUserHomeDir() (string, error) {
 
 // Session Manager Handler
 
+func (a *App) GetListSession() []*dto.SessionManagerDto {
+	return a.SessionManager.GetListSession()
+}
+
 func (a *App) ConnectSession(server *dto.ServerSessionManagement) (string, error) {
 	return a.SessionManager.ConnectSession(a.ctx, server)
 }
 
-func (a *App) GetSession(sessionID string) (*entity.Session, bool) {
+func (a *App) GetSession(sessionID string) *dto.SessionManagerDto {
 	return a.SessionManager.GetSession(sessionID)
 }
 

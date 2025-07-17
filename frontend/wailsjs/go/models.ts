@@ -139,28 +139,18 @@ export namespace dto {
 	        this.type = source["type"];
 	    }
 	}
-
-}
-
-export namespace entity {
-	
-	export class Session {
-	    ID: string;
-	    ServerInfo?: dto.ServerSessionManagement;
-	    SSHClient?: ssh.Client;
-	    // Go type: sftp
-	    SFTPClient?: any;
+	export class SessionManagerDto {
+	    id: string;
+	    server_info?: ServerSessionManagement;
 	
 	    static createFrom(source: any = {}) {
-	        return new Session(source);
+	        return new SessionManagerDto(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ID = source["ID"];
-	        this.ServerInfo = this.convertValues(source["ServerInfo"], dto.ServerSessionManagement);
-	        this.SSHClient = this.convertValues(source["SSHClient"], ssh.Client);
-	        this.SFTPClient = this.convertValues(source["SFTPClient"], null);
+	        this.id = source["id"];
+	        this.server_info = this.convertValues(source["server_info"], ServerSessionManagement);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

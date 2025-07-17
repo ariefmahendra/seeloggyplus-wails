@@ -3,6 +3,7 @@ package usecase
 import (
 	"os"
 	"seeloggyplus/backend/dto"
+	"sort"
 )
 
 type LocalFileUC interface {
@@ -23,8 +24,7 @@ func (l localFileUCImpl) List(path string) ([]dto.FileInfo, error) {
 		return nil, err
 	}
 
-	// Initialize with empty slice instead of nil
-	files := []dto.FileInfo{}
+	var files []dto.FileInfo
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if err != nil {
@@ -40,6 +40,14 @@ func (l localFileUCImpl) List(path string) ([]dto.FileInfo, error) {
 		}
 		files = append(files, fileDTO)
 	}
+
+	// Sorting: Directories first, then by name
+	sort.Slice(files, func(i, j int) bool {
+		if files[i].IsDir != files[j].IsDir {
+			return files[i].IsDir
+		}
+		return files[i].Name < files[j].Name
+	})
 
 	return files, nil
 }

@@ -76,25 +76,32 @@ func NormalizeSSHConnectionError(err error) error {
 
 	switch {
 	case errors.Is(err, context.Canceled):
-		userMessage = "Connection Test Canceled."
+		userMessage = "Operation canceled by the user."
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, os.ErrDeadlineExceeded):
-		userMessage = "Connection Timed Out: Server is unreachable or a firewall is blocking the connection."
+		userMessage = "Operation timed out: The server is unreachable or a firewall is blocking the connection."
 	case errors.As(err, &opError):
 		var syscallErr syscall.Errno
 		if errors.As(opError.Err, &syscallErr) && errors.Is(syscallErr, syscall.ECONNREFUSED) {
-			userMessage = "Connection Refused: Please check the host address and port."
+			userMessage = "Connection refused: Please check the host address and port."
 		} else {
-			userMessage = "Network Error: Could not connect to the server."
+			userMessage = "Network error: Could not connect to the server."
 		}
+	case strings.Contains(err.Error(), "no such file or directory"):
+		userMessage = "File not found: The specified path does not exist on the remote server."
+	case strings.Contains(err.Error(), "permission denied"):
+		userMessage = "Permission denied: You do not have the required permissions to access this resource."
+	case strings.Contains(err.Error(), "connection reset by peer"):
+		userMessage = "Connection reset: The server unexpectedly closed the connection."
+	case strings.Contains(err.Error(), "broken pipe"):
+		userMessage = "Connection error: Broken pipe, the connection was interrupted."
+	case strings.Contains(err.Error(), "no common algorithm"):
+		userMessage = "Connection failed: The server uses incompatible security algorithms."
+	case strings.Contains(err.Error(), "unable to authenticate") || strings.Contains(err.Error(), "permission denied"):
+		userMessage = "Authentication failed: Please check your username and password."
+	case strings.Contains(err.Error(), "EOF"):
+		userMessage = "Connection error: Unexpected end of file, the connection was closed."
 	default:
-		originalError := err.Error()
-		if strings.Contains(originalError, "no common algorithm") {
-			userMessage = "Connection Failed: Server uses incompatible security algorithms."
-		} else if strings.Contains(originalError, "unable to authenticate") || strings.Contains(originalError, "permission denied") {
-			userMessage = "Authentication Failed: Please check your username and password."
-		} else {
-			userMessage = "Connection Failed: An unexpected error occurred."
-		}
+		userMessage = "An unexpected error occurred: " + err.Error()
 	}
 
 	return &custom_error.UserFacingError{

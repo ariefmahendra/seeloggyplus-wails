@@ -14,9 +14,10 @@ import (
 
 type SessionManagerUC interface {
 	Connect(ctx context.Context, server *dto.ServerSessionManagement) (string, error)
-	GetSession(sessionID string) (*entity.Session, bool)
+	GetSession(sessionID string) *dto.SessionManagerDto
 	CloseSession(sessionID string) error
 	CloseAllSession()
+	GetListSession() []*dto.SessionManagerDto
 }
 
 type sessionManagerUCImpl struct {
@@ -28,6 +29,28 @@ func NewSessionManagerUC() SessionManagerUC {
 	return &sessionManagerUCImpl{
 		sessions: make(map[string]*entity.Session),
 	}
+}
+
+func (uc *sessionManagerUCImpl) GetListSession() []*dto.SessionManagerDto {
+	uc.mu.RLock()
+	defer uc.mu.RUnlock()
+
+	log := logger.Get()
+	log.Info().Msg("Retrieving list of active sessions")
+
+	var sessionList []*dto.SessionManagerDto
+	for _, session := range uc.sessions {
+		sessionManagerDto := &dto.SessionManagerDto{
+			ID:         session.ID,
+			ServerInfo: session.ServerInfo,
+			SSHClient:  session.SSHClient,
+			SFTPClient: session.SFTPClient,
+		}
+		sessionList = append(sessionList, sessionManagerDto)
+	}
+
+	log.Info().Int("count", len(sessionList)).Msg("Active sessions retrieved")
+	return sessionList
 }
 
 func (uc *sessionManagerUCImpl) Connect(ctx context.Context, server *dto.ServerSessionManagement) (string, error) {
@@ -73,11 +96,26 @@ func (uc *sessionManagerUCImpl) Connect(ctx context.Context, server *dto.ServerS
 	return sessionID, nil
 }
 
-func (uc *sessionManagerUCImpl) GetSession(sessionID string) (*entity.Session, bool) {
+func (uc *sessionManagerUCImpl) GetSession(sessionID string) *dto.SessionManagerDto {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
+	log := logger.Get()
 	session, found := uc.sessions[sessionID]
-	return session, found
+	if !found {
+		log.Warn().Str("sessionID", sessionID).Msg("Session not found")
+		return nil
+	}
+
+	log.Info().Str("sessionID", sessionID).Msg("Retrieving session")
+
+	sessionManagerDto := &dto.SessionManagerDto{
+		ID:         session.ID,
+		ServerInfo: session.ServerInfo,
+		SSHClient:  session.SSHClient,
+		SFTPClient: session.SFTPClient,
+	}
+
+	return sessionManagerDto
 }
 
 func (uc *sessionManagerUCImpl) CloseSession(sessionID string) error {

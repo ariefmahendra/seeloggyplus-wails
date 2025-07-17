@@ -5,6 +5,7 @@ import (
 	"seeloggyplus/backend/dto"
 	"seeloggyplus/backend/logger"
 	"seeloggyplus/backend/shared/util"
+	"sort"
 )
 
 type RemoteFileUC interface {
@@ -22,16 +23,12 @@ func NewRemoteFileUC(sessionManagerUC SessionManagerUC) RemoteFileUC {
 func (r *remoteFIleUCImpl) GetListFile(sessionID string, path string) ([]dto.FileInfo, error) {
 	log := logger.Get()
 
-	session, found := r.sessionManagerUC.GetSession(sessionID)
-	if !found {
+	session := r.sessionManagerUC.GetSession(sessionID)
+	if session == nil {
 		return nil, fmt.Errorf("session with ID '%s' not found or has expired", sessionID)
 	}
 
 	log.Info().Str("path", path).Str("sessionID", sessionID).Msg("Listing files from remote server")
-
-	// optional Set timeout
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
 
 	sftpFiles, err := session.SFTPClient.ReadDir(path)
 	if err != nil {
@@ -39,8 +36,7 @@ func (r *remoteFIleUCImpl) GetListFile(sessionID string, path string) ([]dto.Fil
 		return nil, util.NormalizeSSHConnectionError(err)
 	}
 
-	// Initialize with empty slice instead of nil
-	files := []dto.FileInfo{}
+	var files []dto.FileInfo
 	for _, f := range sftpFiles {
 		fileInfo := dto.FileInfo{
 			Name:    f.Name(),
@@ -51,6 +47,14 @@ func (r *remoteFIleUCImpl) GetListFile(sessionID string, path string) ([]dto.Fil
 		}
 		files = append(files, fileInfo)
 	}
+
+	// Sorting: Directories first, then by name
+	sort.Slice(files, func(i, j int) bool {
+		if files[i].IsDir != files[j].IsDir {
+			return files[i].IsDir
+		}
+		return files[i].Name < files[j].Name
+	})
 
 	return files, nil
 }

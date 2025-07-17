@@ -30,6 +30,10 @@ export function GetListFiles(arg1, arg2) {
   return window['go']['main']['App']['GetListFiles'](arg1, arg2);
 }
 
+export function GetListSession() {
+  return window['go']['main']['App']['GetListSession']();
+}
+
 export function GetServerById(arg1) {
   return window['go']['main']['App']['GetServerById'](arg1);
 }

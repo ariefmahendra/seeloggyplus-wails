@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"seeloggyplus/backend/dto"
-	"seeloggyplus/backend/entity"
 	"seeloggyplus/backend/usecase"
 )
 
@@ -15,11 +14,15 @@ func NewSessionManagerHandler(sessionManagerUC usecase.SessionManagerUC) *Sessio
 	return &SessionManagerHandler{sessionManagerUC: sessionManagerUC}
 }
 
+func (h *SessionManagerHandler) GetListSession() []*dto.SessionManagerDto {
+	return h.sessionManagerUC.GetListSession()
+}
+
 func (h *SessionManagerHandler) ConnectSession(ctx context.Context, server *dto.ServerSessionManagement) (string, error) {
 	return h.sessionManagerUC.Connect(ctx, server)
 }
 
-func (h *SessionManagerHandler) GetSession(sessionID string) (*entity.Session, bool) {
+func (h *SessionManagerHandler) GetSession(sessionID string) *dto.SessionManagerDto {
 	return h.sessionManagerUC.GetSession(sessionID)
 }
 
