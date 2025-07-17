@@ -296,7 +296,7 @@
 
 <div class="flex flex-col h-screen bg-slate-900">
     <!-- Simplified Header -->
-    <header class="flex items-center justify-between px-4 py-4 bg-slat-900 shadow-md border-b border-slate-900">
+    <header class="flex items-center justify-between px-4 py-2 bg-slat-900 shadow-md border-b border-slate-900">
         <!-- Left controls -->
         <div class="flex items-center gap-3">
             <button
@@ -429,7 +429,7 @@
     {/if}
 
     <!-- Main content -->
-    <main class="flex-1 overflow-hidden px-4">
+    <main class="flex-1 overflow-hidden px-4 py-2">
         {#if isLoading}
             <div class="flex items-center justify-center h-full">
                 <div class="flex items-center gap-2 text-slate-400">
