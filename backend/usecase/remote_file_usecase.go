@@ -39,7 +39,8 @@ func (r *remoteFIleUCImpl) GetListFile(sessionID string, path string) ([]dto.Fil
 		return nil, util.NormalizeSSHConnectionError(err)
 	}
 
-	var files []dto.FileInfo
+	// Initialize with empty slice instead of nil
+	files := []dto.FileInfo{}
 	for _, f := range sftpFiles {
 		fileInfo := dto.FileInfo{
 			Name:    f.Name(),

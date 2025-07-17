@@ -21,7 +21,7 @@ export function GetServerById(arg1:string):Promise<dto.ServerResponse>;
 
 export function GetSession(arg1:string):Promise<entity.Session|boolean>;
 
-export function GetUserHomeDire():Promise<string>;
+export function GetUserHomeDir():Promise<string>;
 
 export function ListFiles(arg1:string):Promise<Array<dto.FileInfo>>;
 

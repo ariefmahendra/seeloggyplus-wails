@@ -23,7 +23,8 @@ func (l localFileUCImpl) List(path string) ([]dto.FileInfo, error) {
 		return nil, err
 	}
 
-	var files []dto.FileInfo
+	// Initialize with empty slice instead of nil
+	files := []dto.FileInfo{}
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if err != nil {

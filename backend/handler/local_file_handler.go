@@ -18,5 +18,5 @@ func (h *LocalFileHandler) ListFiles(path string) ([]dto.FileInfo, error) {
 }
 
 func (h *LocalFileHandler) GetUserHomeDir() (string, error) {
-	return h.GetUserHomeDir()
+	return h.localFileUC.GetUserHomeDir()
 }

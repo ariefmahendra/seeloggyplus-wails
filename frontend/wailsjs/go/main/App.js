@@ -38,8 +38,8 @@ export function GetSession(arg1) {
   return window['go']['main']['App']['GetSession'](arg1);
 }
 
-export function GetUserHomeDire() {
-  return window['go']['main']['App']['GetUserHomeDire']();
+export function GetUserHomeDir() {
+  return window['go']['main']['App']['GetUserHomeDir']();
 }
 
 export function ListFiles(arg1) {

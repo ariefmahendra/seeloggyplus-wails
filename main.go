@@ -35,17 +35,20 @@ func main() {
 	connectionUC := usecase.NewConnectionUseCase()
 	sessionManagerUC := usecase.NewSessionManagerUC()
 	remoteFileUC := usecase.NewRemoteFileUC(sessionManagerUC)
+	localFileUC := usecase.NewLocalFileUC()
 
 	serverHandler := handler.NewServerHandler(serverUC)
 	connectionHandler := handler.NewConnectionHandler(connectionUC)
 	remoteFileHandler := handler.NewRemoteFileHandler(remoteFileUC)
 	sessionManagerHandler := handler.NewSessionManagerHandler(sessionManagerUC)
+	localFileHandler := handler.NewLocalFileHandler(localFileUC)
 
 	app := NewApp(
 		db,
 		serverHandler,
 		connectionHandler,
 		remoteFileHandler,
+		localFileHandler,
 		sessionManagerHandler,
 	)
 

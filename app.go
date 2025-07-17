@@ -25,12 +25,13 @@ type App struct {
 }
 
 // NewApp creates a new App application struct
-func NewApp(db *sql.DB, server *handler.ServerHandler, connection *handler.ConnectionHandler, remoteFile *handler.RemoteFileHandler, sessionManager *handler.SessionManagerHandler) *App {
+func NewApp(db *sql.DB, server *handler.ServerHandler, connection *handler.ConnectionHandler, remoteFile *handler.RemoteFileHandler, localFile *handler.LocalFileHandler, sessionManager *handler.SessionManagerHandler) *App {
 	return &App{
 		db:                  db,
 		Server:              server,
 		Connection:          connection,
 		RemoteFile:          remoteFile,
+		LocalFile:           localFile,
 		SessionManager:      sessionManager,
 		cancellableRequests: make(map[string]context.CancelFunc),
 	}
@@ -125,7 +126,7 @@ func (a *App) ListFiles(path string) ([]dto.FileInfo, error) {
 	return a.LocalFile.ListFiles(path)
 }
 
-func (a *App) GetUserHomeDire() (string, error) {
+func (a *App) GetUserHomeDir() (string, error) {
 	return a.LocalFile.GetUserHomeDir()
 }
 

@@ -172,12 +172,9 @@
         </div>
     </nav>
 
-    <div class="flex flex-1 flex-col overflow-y-auto">
-        <main class="flex-grow p-6">
-            <Router {routes} />
-        </main>
-        <Footer />
-    </div>
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <Router {routes} />
+    </main>
 </div>
 
 <style>
