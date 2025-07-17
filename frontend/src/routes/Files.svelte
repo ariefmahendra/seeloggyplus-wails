@@ -12,8 +12,8 @@
     import {dto} from '../../wailsjs/go/models';
 
     let currentPath = "";
-    let files: dto.FileInfo[] = []; // Always initialize as an empty array
-    let servers: dto.ServerResponse[] = []; // Always initialize as an empty array
+    let files: dto.FileInfo[] = [];
+    let servers: dto.ServerResponse[] = [];
     let activeSessionId: string = 'local';
     let isLoading = false;
     let userHomeDir = '';
@@ -21,6 +21,11 @@
     let viewMode: 'grid' | 'list' = 'list';
     let sessionStatuses: Record<string, boolean> = {};
     let isEditingBreadcrumb: boolean = false;
+
+    let errorMessage = '';
+    let errorType: 'error' | 'warning' | 'info' = 'error';
+    let showError = false;
+    let errorTimeout: number;
 
     // Safe reactive statement with fallback
     $: pathParts = currentPath ? currentPath.split('/').filter(Boolean) : [];
@@ -83,6 +88,47 @@
         init();
     });
 
+    function showErrorMessage(message: string, type: 'error' | 'warning' | 'info' = 'error', duration: number = 5000) {
+        errorMessage = message;
+        errorType = type;
+        showError = true;
+
+        // Clear existing timeout
+        if (errorTimeout) {
+            clearTimeout(errorTimeout);
+        }
+
+        // Auto-hide after duration
+        errorTimeout = setTimeout(() => {
+            hideError();
+        }, duration);
+    }
+
+    function hideError() {
+        showError = false;
+        if (errorTimeout) {
+            clearTimeout(errorTimeout);
+        }
+    }
+
+    function getErrorIcon(type: 'error' | 'warning' | 'info'): string {
+        switch (type) {
+            case 'error': return 'ri-error-warning-line';
+            case 'warning': return 'ri-alert-line';
+            case 'info': return 'ri-information-line';
+            default: return 'ri-error-warning-line';
+        }
+    }
+
+    function getErrorClasses(type: 'error' | 'warning' | 'info'): string {
+        switch (type) {
+            case 'error': return 'bg-red-900/50 border-red-500 text-red-400';
+            case 'warning': return 'bg-yellow-900/50 border-yellow-500 text-yellow-400';
+            case 'info': return 'bg-blue-900/50 border-blue-500 text-blue-400';
+            default: return 'bg-red-900/50 border-red-500 text-red-400';
+        }
+    }
+
     async function navigateToDirectory(file: dto.FileInfo) {
         if (!file.isDir) return;
 
@@ -124,6 +170,7 @@
     async function loadFiles() {
         isLoading = true;
         isEditingBreadcrumb = false;
+        hideError();
         try {
             const result = activeSessionId === 'local'
                 ? await ListFiles(currentPath)
@@ -135,10 +182,14 @@
             console.error('Error loading files:', error);
             files = []; // Always ensure files is an array
 
+            const errorMsg = error?.toString() || 'An unexpected error occurred';
+            showErrorMessage(`${errorMsg}`, 'error');
+
             if (activeSessionId !== 'local' && error.includes('session')) {
                 console.log('Session error detected, switching to local');
                 activeSessionId = 'local';
                 currentPath = userHomeDir;
+                showErrorMessage('Session expired. Switched to local files.', 'warning');
                 await loadFiles();
                 await updateSessionStatuses();
             }
@@ -155,12 +206,15 @@
         } catch (error) {
             console.error('Error loading servers:', error);
             servers = []; // Always ensure servers is an array
+            showErrorMessage('Failed to load servers. Please try again.', 'error');
         }
     }
 
     async function connectToServer(server: dto.ServerResponse) {
         try {
             isLoading = true;
+            showServerModal = false;
+            hideError();
 
             const serverSession: dto.ServerSessionManagement = {
                 id: server.id,
@@ -176,9 +230,11 @@
             currentPath = '/';
             await loadFiles();
             await updateSessionStatuses();
-            showServerModal = false;
+            showErrorMessage(`Connected to ${server.name}`, 'info', 3000);
         } catch (error) {
             console.error('Error connecting to server:', error);
+            const errorMsg = error?.toString() || 'Connection failed';
+            showErrorMessage(`${errorMsg}`, 'error');
         } finally {
             isLoading = false;
         }
@@ -191,8 +247,10 @@
             currentPath = userHomeDir;
             await loadFiles();
             await updateSessionStatuses();
+            showErrorMessage('Disconnected from server', 'info', 3000);
         } catch (error) {
             console.error('Error disconnecting from server:', error);
+            showErrorMessage('Failed to disconnect from server', 'error');
         }
     }
 
@@ -219,6 +277,7 @@
         } catch (error) {
             console.error('Error updating session statuses:', error);
             sessionStatuses = {}; // Reset to empty objects on error
+            showErrorMessage('Failed to update connection status', 'warning');
         }
     }
 
@@ -237,28 +296,27 @@
 
 <div class="flex flex-col h-screen bg-slate-900">
     <!-- Simplified Header -->
-    <header class="flex items-center justify-between p-3 bg-slate-800 border-b border-slate-700">
+    <header class="flex items-center justify-between px-4 py-4 bg-slat-900 shadow-md border-b border-slate-900">
         <!-- Left controls -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
             <button
                     on:click={async () => {
                         await updateSessionStatuses();
-                        showServerModal = true
+                        showServerModal = true;
                     }}
-                    class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"
+                    class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-md transition-colors flex items-center gap-1"
             >
-                <i class="ri-server-line mr-1"></i>
+                <i class="ri-server-line text-sm"></i>
                 Servers
             </button>
-
             <button
                     on:click={navigateUp}
                     disabled={currentPath === (activeSessionId === 'local' ? userHomeDir : '/')}
-                    class="px-3 py-2 bg-slate-600 hover:bg-slate-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm rounded-md transition-colors"
+                    class="px-3 py-1 bg-slate-600 hover:bg-slate-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-xs rounded-md transition-colors flex items-center gap-1"
             >
-                <i class="ri-arrow-up-line"></i>
+                <i class="ri-arrow-up-line text-sm"></i>
+                Up
             </button>
-
             <button
                     on:click={async () => {
                         if (!(await validateActiveSession())) {
@@ -268,38 +326,41 @@
                         }
                         await loadFiles();
                     }}
-                    class="p-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
+                    class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-md transition-colors flex items-center gap-1"
                     disabled={isLoading}
             >
-                <i class="ri-refresh-line {isLoading ? 'animate-spin' : ''}"></i>
+                <i class="ri-refresh-line {isLoading ? 'animate-spin' : ''} text-sm"></i>
+                Refresh
             </button>
         </div>
 
-        <!--BreadCrumb Navigation-->
-        <div class="flex-1 mx-4">
+        <!-- Breadcrumb Navigation -->
+        <div class="flex-1 mx-4 overflow-x-auto">
             {#if isEditingBreadcrumb}
-                <!-- Editable Input -->
-                <div class="flex items-center px-3 py-2 bg-slate-700 rounded-md text-sm font-mono">
+                <div class="flex items-center px-3 py-1 bg-slate-700 rounded-md text-xs font-mono">
                     <i class="ri-home-line mr-2 text-slate-400"></i>
                     <input
                             type="text"
                             class="bg-transparent border-none outline-none text-blue-400 flex-1"
                             bind:value={currentPath}
                             on:keydown={(e) => {
-                    if (e.key === 'Enter') {
-                        loadFiles();
-                        isEditingBreadcrumb = false;
-                    }
-                }}
+                        if (e.key === 'Enter') {
+                            loadFiles();
+                            isEditingBreadcrumb = false;
+                        }
+                    }}
                             on:blur={() => isEditingBreadcrumb = false}
                     />
                 </div>
             {:else}
-                <!-- Breadcrumb Buttons -->
                 <div
-                        class="flex items-center px-3 py-2 bg-slate-700 rounded-md text-sm font-mono overflow-x-auto whitespace-nowrap cursor-pointer"
+                        class="flex items-center px-3 py-1 bg-slate-700 rounded-md text-xs font-mono whitespace-nowrap cursor-pointer"
                         on:click={() => isEditingBreadcrumb = true}
-                        on:keydown={(e) => { if (e.key === 'Enter') loadFiles(); }}
+                        on:keydown={(e) => {
+                            if (e.key === 'Enter') {
+                                loadFiles();
+                            }
+                        }}
                 >
                     <i class="ri-home-line mr-2 text-slate-400"></i>
                     {#each pathParts as part, index}
@@ -318,41 +379,57 @@
         </div>
 
         <!-- Right controls -->
-        <div class="flex items-center gap-2">
-            <!-- View toggle -->
+        <div class="flex items-center gap-3">
             <div class="flex bg-slate-700 rounded-md p-0.5">
                 <button
                         on:click={() => viewMode = 'list'}
-                        class="p-1.5 rounded text-sm {viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-slate-400'}"
+                        class="p-2 rounded text-xs {viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-slate-400'}"
                 >
                     <i class="ri-list-check"></i>
                 </button>
                 <button
                         on:click={() => viewMode = 'grid'}
-                        class="p-1.5 rounded text-sm {viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400'}"
+                        class="p-2 rounded text-xs {viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400'}"
                 >
                     <i class="ri-grid-line"></i>
                 </button>
             </div>
-
             {#if activeSessionId !== 'local'}
-                <div class="flex items-center gap-2 px-2 py-1 bg-green-900/50 text-green-400 text-xs rounded-md">
+                <div class="flex items-center gap-2 px-3 py-1 bg-green-900/50 text-green-400 text-xs rounded-md">
                     <i class="ri-wifi-line"></i>
                     <span>Connected</span>
                 </div>
                 <button
                         on:click={disconnectFromServer}
-                        class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors"
+                        class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-md transition-colors flex items-center gap-1"
                 >
-                    <i class="ri-logout-circle-line mr-1"></i>
+                    <i class="ri-logout-circle-line text-sm"></i>
                     Disconnect
                 </button>
             {/if}
         </div>
     </header>
 
+    <!-- Error Message -->
+    {#if showError}
+        <div class="px-4 py-2">
+            <div class="flex items-center justify-between p-3 rounded-md border {getErrorClasses(errorType)} animate-slide-down">
+                <div class="flex items-center gap-3">
+                    <i class="{getErrorIcon(errorType)} text-lg"></i>
+                    <span class="text-sm font-medium">{errorMessage}</span>
+                </div>
+                <button
+                        on:click={hideError}
+                        class="text-current hover:opacity-70 transition-opacity"
+                >
+                    <i class="ri-close-line text-lg"></i>
+                </button>
+            </div>
+        </div>
+    {/if}
+
     <!-- Main content -->
-    <main class="flex-1 overflow-hidden p-4">
+    <main class="flex-1 overflow-hidden px-4">
         {#if isLoading}
             <div class="flex items-center justify-center h-full">
                 <div class="flex items-center gap-2 text-slate-400">

@@ -109,7 +109,7 @@
 
 <div class="flex h-screen overflow-hidden bg-gray-900 text-white font-sans">
     <nav
-            class="group relative flex flex-shrink-0 flex-col bg-gray-800 p-3"
+            class="group relative flex flex-shrink-0 flex-col bg-slate-900 p-3"
             class:transition-width={useTransition}
             class:duration-300={useTransition}
             class:ease-in-out={useTransition}
