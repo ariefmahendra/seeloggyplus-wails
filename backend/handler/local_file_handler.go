@@ -20,3 +20,11 @@ func (h *LocalFileHandler) ListFiles(path string) ([]dto.FileInfo, error) {
 func (h *LocalFileHandler) GetUserHomeDir() (string, error) {
 	return h.localFileUC.GetUserHomeDir()
 }
+
+func (h *LocalFileHandler) GetDrives() ([]dto.DriveInfo, error) {
+	return h.localFileUC.GetDrives()
+}
+
+func (h *LocalFileHandler) GetRootPath() (string, error) {
+	return h.localFileUC.GetRootPath()
+}

@@ -30,18 +30,21 @@ func main() {
 	}
 
 	serverRepo := repository.NewServerRepository(db)
+	workspaceRepository := repository.NewWorkspaceRepository(db)
 
 	serverUC := usecase.NewServerUseCase(serverRepo)
 	connectionUC := usecase.NewConnectionUseCase()
-	sessionManagerUC := usecase.NewSessionManagerUC()
+	sessionManagerUC := usecase.NewSessionManagerUC(serverRepo)
 	remoteFileUC := usecase.NewRemoteFileUC(sessionManagerUC)
 	localFileUC := usecase.NewLocalFileUC()
+	workspaceUC := usecase.NewWorkspaceUC(workspaceRepository, localFileUC, remoteFileUC, sessionManagerUC)
 
 	serverHandler := handler.NewServerHandler(serverUC)
 	connectionHandler := handler.NewConnectionHandler(connectionUC)
 	remoteFileHandler := handler.NewRemoteFileHandler(remoteFileUC)
 	sessionManagerHandler := handler.NewSessionManagerHandler(sessionManagerUC)
 	localFileHandler := handler.NewLocalFileHandler(localFileUC)
+	workspaceHandler := handler.NewWorkspaceHandler(workspaceUC)
 
 	app := NewApp(
 		db,
@@ -50,6 +53,7 @@ func main() {
 		remoteFileHandler,
 		localFileHandler,
 		sessionManagerHandler,
+		workspaceHandler,
 	)
 
 	err = wails.Run(&options.App{

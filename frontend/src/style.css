@@ -1,5 +1,224 @@
-/* src/style.css */
+@import 'carbon-components-svelte/css/white.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-    
+
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
+:global(body) {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #0f172a;
+}
+
+/* Button Styles */
+.btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2;
+}
+
+.btn-secondary {
+    @apply bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2;
+}
+
+.btn-ghost {
+    @apply text-slate-400 hover:text-white hover:bg-slate-700 px-3 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1;
+}
+
+.btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+}
+
+/* Card Styles */
+.stat-card {
+    @apply bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200;
+}
+
+.dashboard-card {
+    @apply bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg;
+}
+
+.card {
+    @apply bg-gray-800 border border-gray-700 rounded-lg;
+}
+
+.card-header {
+    @apply p-4 border-b border-gray-700;
+}
+
+.card-body {
+    @apply p-4;
+}
+
+/* Log Styles */
+.log-entry {
+    @apply transition-all duration-200;
+}
+
+.log-level {
+    @apply px-2 py-1 rounded-full text-xs font-bold uppercase;
+}
+
+.log-level-info {
+    @apply bg-blue-600/20 text-blue-400;
+}
+
+.log-level-warn {
+    @apply bg-yellow-600/20 text-yellow-400;
+}
+
+.log-level-error {
+    @apply bg-red-600/20 text-red-400;
+}
+
+.log-level-debug {
+    @apply bg-gray-600/20 text-gray-400;
+}
+
+.log-level-default {
+    @apply bg-slate-600/20 text-slate-400;
+}
+
+/* Filter Styles */
+.filter-btn {
+    @apply w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-all duration-200;
+}
+
+.filter-btn-active {
+    @apply bg-blue-600/20 text-blue-400 border border-blue-500/30;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+}
+
+.modal-container {
+    @apply bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden;
+}
+
+.modal-header {
+    @apply flex items-center justify-between p-6 border-b border-slate-700;
+}
+
+.modal-content {
+    @apply p-6 overflow-auto max-h-[calc(90vh-120px)];
+}
+
+/* Input styles */
+.input-field {
+    @apply w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+/* Status indicators */
+.status-online {
+    @apply text-green-400;
+}
+
+.status-offline {
+    @apply text-red-400;
+}
+
+.status-warning {
+    @apply text-yellow-400;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar,
+:global(.overflow-auto::-webkit-scrollbar) {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+:global(.overflow-auto::-webkit-scrollbar-track) {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+:global(.overflow-auto::-webkit-scrollbar-thumb) {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+:global(.overflow-auto::-webkit-scrollbar-thumb:hover) {
+    background: rgba(148, 163, 184, 0.5);
+}
+
+/* Animations */
+@keyframes slide-down {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.animate-slide-down {
+    animation: slide-down 0.3s ease-out;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+/* Focus states for accessibility */
+:global(button:focus) {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Smooth transitions */
+:global(*) {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .modal-container {
+        @apply max-w-full mx-4;
+    }
+
+    .stat-card {
+        @apply p-4;
+    }
+
+    .dashboard-card {
+        @apply p-4;
+    }
+
+    .modal-content {
+        @apply p-4;
+    }
+}

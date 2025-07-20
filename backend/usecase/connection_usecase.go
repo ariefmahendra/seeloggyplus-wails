@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"golang.org/x/crypto/ssh"
-	"seeloggyplus/backend/custom_error"
 	"seeloggyplus/backend/dto"
-	"seeloggyplus/backend/entity"
 	"seeloggyplus/backend/logger"
 	"seeloggyplus/backend/shared/util"
 )
@@ -23,16 +21,7 @@ func NewConnectionUseCase() ConnectionUC {
 
 func (uc *connectionUCImpl) TestConnection(ctx context.Context, req *dto.ServerCreateRequest) error {
 	log := logger.Get()
-	log.Info().Str("address", req.Address).Int("port", req.Port).Str("type", req.Type).Msg("Attempting to test connection")
-
-	connectionType := entity.ConnectionType(req.Type)
-	if err := connectionType.IsValid(); err != nil {
-		log.Warn().Err(err).Str("type", req.Type).Msg("Invalid connection type provided")
-		return &custom_error.UserFacingError{
-			UserMessage:   "Invalid Connection Type Provided.",
-			InternalError: err,
-		}
-	}
+	log.Info().Str("address", req.Address).Int("port", req.Port).Msg("Attempting to test connection")
 
 	address := fmt.Sprintf("%s:%d", req.Address, req.Port)
 

@@ -45,12 +45,6 @@ func (s *serverUCImpl) AddServer(ctx context.Context, payload *dto.ServerCreateR
 	serverID := uuid.New().String()
 	log.Info().Str("name", payload.Name).Str("generated_id", serverID).Msg("Processing AddServer use case")
 
-	connectionType := entity.ConnectionType(payload.Type)
-	if err := connectionType.IsValid(); err != nil {
-		log.Warn().Err(err).Str("type", payload.Type).Msg("Invalid connection type provided")
-		return nil, err
-	}
-
 	newServer := entity.Server{
 		ID:       serverID,
 		Name:     payload.Name,
@@ -58,7 +52,6 @@ func (s *serverUCImpl) AddServer(ctx context.Context, payload *dto.ServerCreateR
 		Port:     payload.Port,
 		User:     payload.User,
 		Password: payload.Password,
-		Type:     connectionType,
 	}
 
 	createdServer, err := s.repo.Create(ctx, &newServer)
@@ -78,7 +71,6 @@ func (s *serverUCImpl) AddServer(ctx context.Context, payload *dto.ServerCreateR
 		Password:  createdServer.Password,
 		CreatedAt: createdServer.CreatedAt.String(),
 		UpdatedAt: createdServer.UpdatedAt.String(),
-		Type:      string(createdServer.Type),
 	}
 
 	return &serverResponse, nil
@@ -99,12 +91,6 @@ func (s *serverUCImpl) UpdateServer(ctx context.Context, payload *dto.ServerUpda
 		return err
 	}
 
-	connectionType := entity.ConnectionType(payload.Type)
-	if err := connectionType.IsValid(); err != nil {
-		log.Warn().Err(err).Str("type", payload.Type).Msg("Invalid connection type provided for update")
-		return err
-	}
-
 	updatedServer := entity.Server{
 		ID:       payload.ID,
 		Name:     payload.Name,
@@ -112,7 +98,6 @@ func (s *serverUCImpl) UpdateServer(ctx context.Context, payload *dto.ServerUpda
 		Port:     payload.Port,
 		User:     payload.User,
 		Password: payload.Password,
-		Type:     connectionType,
 	}
 
 	if err := s.repo.Update(ctx, &updatedServer); err != nil {
@@ -160,7 +145,6 @@ func (s *serverUCImpl) ListServers(ctx context.Context) ([]*dto.ServerResponse, 
 			Password:  server.Password,
 			CreatedAt: server.CreatedAt.String(),
 			UpdatedAt: server.UpdatedAt.String(),
-			Type:      string(server.Type),
 		})
 	}
 
@@ -193,7 +177,6 @@ func (s *serverUCImpl) GetBydId(ctx context.Context, id string) (*dto.ServerResp
 		Password:  server.Password,
 		CreatedAt: server.CreatedAt.String(),
 		UpdatedAt: server.UpdatedAt.String(),
-		Type:      string(server.Type),
 	}
 
 	return &serverResponse, nil

@@ -18,8 +18,8 @@ func (h *SessionManagerHandler) GetListSession() []*dto.SessionManagerDto {
 	return h.sessionManagerUC.GetListSession()
 }
 
-func (h *SessionManagerHandler) ConnectSession(ctx context.Context, server *dto.ServerSessionManagement) (string, error) {
-	return h.sessionManagerUC.Connect(ctx, server)
+func (h *SessionManagerHandler) ConnectSession(ctx context.Context, serverId string) (string, error) {
+	return h.sessionManagerUC.Connect(ctx, serverId)
 }
 
 func (h *SessionManagerHandler) GetSession(sessionID string) *dto.SessionManagerDto {

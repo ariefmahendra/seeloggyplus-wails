@@ -34,6 +34,8 @@
     "buffer-crc32": "^0.2.13",
     "callsites": "^3.1.0",
     "caniuse-lite": "^1.0.30001727",
+    "carbon-components-svelte": "^0.89.4",
+    "carbon-icons-svelte": "^13.4.0",
     "chokidar": "^3.6.0",
     "concat-map": "^0.0.1",
     "debug": "^4.4.1",

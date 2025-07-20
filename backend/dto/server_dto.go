@@ -6,7 +6,6 @@ type ServerCreateRequest struct {
 	Port     int    `json:"port,omitempty"`
 	User     string `json:"user,omitempty"`
 	Password string `json:"password,omitempty"`
-	Type     string `json:"type,omitempty"`
 }
 
 type ServerUpdateRequest struct {
@@ -16,7 +15,6 @@ type ServerUpdateRequest struct {
 	Port     int    `json:"port,omitempty"`
 	User     string `json:"user,omitempty"`
 	Password string `json:"password,omitempty"`
-	Type     string `json:"type,omitempty"`
 }
 
 type ServerResponse struct {
@@ -28,7 +26,6 @@ type ServerResponse struct {
 	Password  string `json:"password"`
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
-	Type      string `json:"type"`
 }
 
 type ServerSessionManagement struct {
@@ -38,5 +35,4 @@ type ServerSessionManagement struct {
 	Port     int    `json:"port"`
 	User     string `json:"user"`
 	Password string `json:"password"`
-	Type     string `json:"type"`
 }

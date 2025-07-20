@@ -45,7 +45,7 @@ func (s *serverRepositoryImpl) FindByID(ctx context.Context, id string) (*entity
 
 	var serverById entity.Server
 	err := s.db.QueryRowContext(ctx, config.GetServerById, id).
-		Scan(&serverById.ID, &serverById.Name, &serverById.Address, &serverById.Port, &serverById.User, &serverById.Password, &serverById.Type, &serverById.CreatedAt, &serverById.UpdatedAt)
+		Scan(&serverById.ID, &serverById.Name, &serverById.Address, &serverById.Port, &serverById.User, &serverById.Password, &serverById.CreatedAt, &serverById.UpdatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -64,8 +64,8 @@ func (s *serverRepositoryImpl) Create(ctx context.Context, server *entity.Server
 	log.Debug().Str("name", server.Name).Msg("Executing Create query")
 
 	var serverCreated entity.Server
-	err := s.db.QueryRowContext(ctx, config.CreateServer, server.ID, server.Name, server.Address, server.Port, server.User, server.Password, server.Type).
-		Scan(&serverCreated.ID, &serverCreated.Name, &serverCreated.Address, &serverCreated.Port, &serverCreated.User, &serverCreated.Password, &serverCreated.Type, &serverCreated.CreatedAt, &serverCreated.UpdatedAt)
+	err := s.db.QueryRowContext(ctx, config.CreateServer, server.ID, server.Name, server.Address, server.Port, server.User, server.Password).
+		Scan(&serverCreated.ID, &serverCreated.Name, &serverCreated.Address, &serverCreated.Port, &serverCreated.User, &serverCreated.Password, &serverCreated.CreatedAt, &serverCreated.UpdatedAt)
 	if err != nil {
 		log.Error().Err(err).Str("name", server.Name).Msg("Failed to execute create query")
 		return nil, err
@@ -78,7 +78,7 @@ func (s *serverRepositoryImpl) Update(ctx context.Context, server *entity.Server
 	log := logger.Get()
 	log.Debug().Str("id", server.ID).Msg("Executing Update query")
 
-	res, err := s.db.ExecContext(ctx, config.UpdateServer, server.Name, server.Address, server.Port, server.User, server.Password, server.Type, server.ID)
+	res, err := s.db.ExecContext(ctx, config.UpdateServer, server.Name, server.Address, server.Port, server.User, server.Password, server.ID)
 	if err != nil {
 		log.Error().Err(err).Str("id", server.ID).Msg("Failed to execute update query")
 		return err
@@ -133,7 +133,7 @@ func (s *serverRepositoryImpl) FindAll(ctx context.Context) ([]*entity.Server, e
 	var servers []*entity.Server
 	for rows.Next() {
 		var server entity.Server
-		err := rows.Scan(&server.ID, &server.Name, &server.Address, &server.Port, &server.User, &server.Password, &server.Type, &server.CreatedAt, &server.UpdatedAt)
+		err := rows.Scan(&server.ID, &server.Name, &server.Address, &server.Port, &server.User, &server.Password, &server.CreatedAt, &server.UpdatedAt)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to scan server row in FindAll")
 			return nil, err
