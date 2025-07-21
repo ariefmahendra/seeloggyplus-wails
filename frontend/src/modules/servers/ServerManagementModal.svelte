@@ -137,7 +137,7 @@
     </div>
 
     <!-- Modal Content -->
-    <div class="space-y-6">
+    <div class="space-y-6 overflow-hidden">
         <!-- Header Section -->
         <div class="flex items-center justify-between">
             <div>
@@ -189,7 +189,7 @@
                 </div>
             {:else}
                 <!-- Server List -->
-                <div class="max-h-96 overflow-y-auto">
+                <div class="max-h-96 overflow-y-auto overflow-x-hidden">
                     <ServerList
                             bind:this={serverListComponent}
                             servers={filteredServers}
