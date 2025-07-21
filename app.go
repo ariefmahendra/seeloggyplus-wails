@@ -11,14 +11,13 @@ import (
 
 // App struct
 type App struct {
-	ctx              context.Context
-	db               *sql.DB
-	Server           *handler.ServerHandler         `json:"-"`
-	Connection       *handler.ConnectionHandler     `json:"-"`
-	RemoteFile       *handler.RemoteFileHandler     `json:"-"`
-	LocalFile        *handler.LocalFileHandler      `json:"-"`
-	SessionManager   *handler.SessionManagerHandler `json:"-"`
-	WorkspaceHandler *handler.WorkspaceHandler      `json:"-"`
+	ctx            context.Context
+	db             *sql.DB
+	Server         *handler.ServerHandler         `json:"-"`
+	Connection     *handler.ConnectionHandler     `json:"-"`
+	RemoteFile     *handler.RemoteFileHandler     `json:"-"`
+	LocalFile      *handler.LocalFileHandler      `json:"-"`
+	SessionManager *handler.SessionManagerHandler `json:"-"`
 
 	cancellableRequests   map[string]context.CancelFunc
 	cancellableRequestsMu sync.Mutex
@@ -31,7 +30,6 @@ func NewApp(db *sql.DB,
 	remoteFile *handler.RemoteFileHandler,
 	localFile *handler.LocalFileHandler,
 	sessionManager *handler.SessionManagerHandler,
-	workspace *handler.WorkspaceHandler,
 ) *App {
 	return &App{
 		db:                  db,
@@ -40,7 +38,6 @@ func NewApp(db *sql.DB,
 		RemoteFile:          remoteFile,
 		LocalFile:           localFile,
 		SessionManager:      sessionManager,
-		WorkspaceHandler:    workspace,
 		cancellableRequests: make(map[string]context.CancelFunc),
 	}
 }
@@ -58,15 +55,6 @@ func (a *App) Startup(ctx context.Context) {
 			appLog.Error().Err(err).Msg("Error when migrate table")
 		}
 		appLog.Debug().Msg("Table migrated successfully")
-	}
-
-	// Migrate workspace tables
-	if a.WorkspaceHandler != nil {
-		err := a.WorkspaceHandler.Migrate(ctx)
-		if err != nil {
-			appLog.Error().Err(err).Msg("Error when migrate workspace tables")
-		}
-		appLog.Debug().Msg("Workspace tables migrated successfully")
 	}
 }
 
@@ -177,36 +165,4 @@ func (a *App) CloseSession(sessionID string) error {
 
 func (a *App) CloseAllSession() {
 	a.SessionManager.CloseAllSession()
-}
-
-func (a *App) CreateWorkspace(req dto.CreateWorkspaceRequest) (*dto.Workspace, error) {
-	return a.WorkspaceHandler.CreateWorkspace(a.ctx, &req)
-}
-
-func (a *App) GetWorkspace(id string) (*dto.WorkspaceWithFiles, error) {
-	return a.WorkspaceHandler.GetWorkspace(a.ctx, id)
-}
-
-func (a *App) GetAllWorkspaces() ([]*dto.Workspace, error) {
-	return a.WorkspaceHandler.GetAllWorkspaces(a.ctx)
-}
-
-func (a *App) UpdateWorkspace(req dto.UpdateWorkspaceRequest) error {
-	return a.WorkspaceHandler.UpdateWorkspace(a.ctx, &req)
-}
-
-func (a *App) DeleteWorkspace(id string) error {
-	return a.WorkspaceHandler.DeleteWorkspace(a.ctx, id)
-}
-
-func (a *App) AddFilesToWorkspace(req dto.AddFileToWorkspaceRequest) error {
-	return a.WorkspaceHandler.AddFilesToWorkspace(a.ctx, &req)
-}
-
-func (a *App) RemoveFileFromWorkspace(fileID string) error {
-	return a.WorkspaceHandler.RemoveFileFromWorkspace(a.ctx, fileID)
-}
-
-func (a *App) AnalyzeFile(req dto.AnalyzeFileRequest) (*dto.LogAnalysisResult, error) {
-	return a.WorkspaceHandler.AnalyzeFile(a.ctx, &req)
 }

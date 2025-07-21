@@ -243,11 +243,6 @@
                 on:click={() => showServerModal = !showServerModal}
         />
         <HeaderGlobalAction
-                iconDescription="Connections"
-                tooltipAlignment="end"
-                icon={ConnectionSignal}
-        />
-        <HeaderGlobalAction
             icon={Settings}
             iconDescription="Settings"
             tooltipAlignment="end"

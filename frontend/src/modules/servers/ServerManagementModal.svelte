@@ -189,7 +189,7 @@
                 </div>
             {:else}
                 <!-- Server List -->
-                <div class="max-h-96 overflow-y-auto overflow-x-hidden">
+                <div class="max-h-96 p-1 overflow-y-auto overflow-x-hidden">
                     <ServerList
                             bind:this={serverListComponent}
                             servers={filteredServers}

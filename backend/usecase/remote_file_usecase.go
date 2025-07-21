@@ -93,7 +93,6 @@ func (r *remoteFileUCImpl) parseListOutput(output, basePath string) ([]dto.FileI
 			continue
 		}
 
-		// Skip '.' And '..' Directories
 		if strings.HasSuffix(line, " .") || strings.HasSuffix(line, " ..") {
 			continue
 		}
@@ -127,7 +126,6 @@ func (r *remoteFileUCImpl) parseFileLine(line, basePath string) (*dto.FileInfo, 
 		size = 0
 	}
 
-	// Parse modification time (fields 5-7)
 	dateStr := strings.Join(fields[5:8], " ")
 	modTime := r.parseModTime(dateStr)
 
@@ -138,7 +136,7 @@ func (r *remoteFileUCImpl) parseFileLine(line, basePath string) (*dto.FileInfo, 
 		Name:    filename,
 		Size:    size,
 		IsDir:   isDir,
-		ModTime: &modTime,
+		ModTime: modTime.String(),
 		Mode:    permissions,
 		Path:    fullPath,
 	}, nil
