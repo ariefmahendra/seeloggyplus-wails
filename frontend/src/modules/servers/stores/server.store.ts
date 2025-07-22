@@ -1,6 +1,6 @@
 import {writable} from 'svelte/store';
 import type {Server, ServerSession} from '../types/server.types';
-import {ServerService} from '../services/serverService';
+import {ServerService} from '../services/server.service';
 
 interface ServerStoreState {
     servers: Server[];

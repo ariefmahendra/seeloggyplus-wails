@@ -2,7 +2,7 @@
     import {Button, InlineNotification, NumberInput, TextInput} from 'carbon-components-svelte';
     import {ConnectionSignal} from 'carbon-icons-svelte';
     import type {ServerFormData, ServerValidationErrors} from '../types/server.types';
-    import {ServerService} from '../services/serverService';
+    import {ServerService} from '../services/server.service';
     import {tick} from "svelte";
 
     export let formData: ServerFormData = {

@@ -3,7 +3,7 @@
     import { Modal, Button } from 'carbon-components-svelte';
     import { TrashCan, ServerProxy } from 'carbon-icons-svelte';
     import type { Server } from '../types/server.types';
-    import { ServerService } from '../services/serverService';
+    import { ServerService } from '../services/server.service';
 
     export let isOpen = false;
     export let server: Server;

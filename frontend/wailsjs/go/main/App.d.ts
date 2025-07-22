@@ -14,7 +14,11 @@ export function ConnectSession(arg1:string):Promise<string>;
 
 export function DeleteServer(arg1:string):Promise<void>;
 
+export function FindSettingsByKey(arg1:string):Promise<dto.SettingsResponseDto>;
+
 export function GetListSession():Promise<Array<dto.SessionManagerDto>>;
+
+export function GetListSettings():Promise<Array<dto.SettingsResponseDto>>;
 
 export function GetLocalDrives():Promise<Array<dto.DriveInfo>>;
 
@@ -34,4 +38,8 @@ export function ListServers():Promise<Array<dto.ServerResponse>>;
 
 export function TestConnection(arg1:string,arg2:dto.ServerCreateRequest):Promise<void>;
 
+export function UpdateAllSettings(arg1:Array<dto.SettingsRequestDto>):Promise<void>;
+
 export function UpdateServer(arg1:dto.ServerUpdateRequest):Promise<void>;
+
+export function UpdateSettings(arg1:dto.SettingsRequestDto):Promise<dto.SettingsResponseDto>;

@@ -1,7 +1,7 @@
 <script lang="ts">
     import {Button, Modal, Search} from 'carbon-components-svelte';
     import {Add, ServerProxy} from 'carbon-icons-svelte';
-    import {serverStore} from './stores/serverStore';
+    import {serverStore} from './stores/server.store';
     import ServerList from './components/ServerList.svelte';
     import AddServerModal from './modals/AddServerModal.svelte';
     import EditServerModal from './modals/EditServerModal.svelte';

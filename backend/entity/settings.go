@@ -1,11 +1,12 @@
 package entity
 
 type Settings struct {
-	ID          string `json:"id"`
-	Key         string `json:"key"`
-	Value       string `json:"value"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
-	CreatedAt   string `json:"createdAt"`
-	UpdatedAt   string `json:"updatedAt"`
+	ID          int
+	Name        string
+	Key         string
+	Value       string
+	Description string
+	Type        string
+	CreatedAt   string
+	UpdatedAt   string
 }

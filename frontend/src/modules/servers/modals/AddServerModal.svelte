@@ -4,7 +4,7 @@
     import { Add } from 'carbon-icons-svelte';
     import ServerForm from '../components/ServerForm.svelte';
     import type { ServerFormData } from '../types/server.types';
-    import { ServerService } from '../services/serverService';
+    import { ServerService } from '../services/server.service';
 
     export let isOpen = false;
 

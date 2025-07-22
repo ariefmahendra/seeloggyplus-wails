@@ -168,6 +168,46 @@ export namespace dto {
 		    return a;
 		}
 	}
+	export class SettingsRequestDto {
+	    key: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SettingsRequestDto(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.value = source["value"];
+	    }
+	}
+	export class SettingsResponseDto {
+	    id: number;
+	    name: string;
+	    key: string;
+	    value: string;
+	    description: string;
+	    type: string;
+	    createdAt: string;
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SettingsResponseDto(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.key = source["key"];
+	        this.value = source["value"];
+	        this.description = source["description"];
+	        this.type = source["type"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
 
 }
 

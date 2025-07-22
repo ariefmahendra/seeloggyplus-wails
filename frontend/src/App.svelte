@@ -25,6 +25,7 @@
     import {Add, DocumentView, Filter, Pause, Play, ServerProxy, Settings, TrashCan, ConnectionSignal} from 'carbon-icons-svelte';
 
     import ServerManagementModal from './modules/servers/ServerManagementModal.svelte'
+    import SettingsModal from "./modules/settings/SettingsModal.svelte";
 
     // Types
     interface LogEntry {
@@ -462,27 +463,4 @@
 <ServerManagementModal bind:isOpen={showServerModal}/>
 
 <!-- Settings Modal -->
-<Modal
-        bind:open={showSettingsModal}
-        modalHeading="Application Settings"
-        primaryButtonText="Save"
-        secondaryButtonText="Cancel"
-        on:click:button--primary={() => showSettingsModal = false}
-        on:click:button--secondary={() => showSettingsModal = false}
->
-    <div class="space-y-4">
-        <Toggle labelText="Auto-refresh logs"/>
-        <Toggle labelText="Show timestamps in relative format"/>
-        <Toggle labelText="Enable syntax highlighting"/>
-        <Select labelText="Default page size">
-            <SelectItem value="25" text="25 logs per page"/>
-            <SelectItem value="50" text="50 logs per page"/>
-            <SelectItem value="100" text="100 logs per page"/>
-        </Select>
-        <TextInput
-                labelText="Refresh interval (seconds)"
-                type="number"
-                value="5"
-        />
-    </div>
-</Modal>
+<SettingsModal bind:isOpen={showSettingsModal}/>

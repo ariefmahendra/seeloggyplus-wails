@@ -26,8 +26,16 @@ export function DeleteServer(arg1) {
   return window['go']['main']['App']['DeleteServer'](arg1);
 }
 
+export function FindSettingsByKey(arg1) {
+  return window['go']['main']['App']['FindSettingsByKey'](arg1);
+}
+
 export function GetListSession() {
   return window['go']['main']['App']['GetListSession']();
+}
+
+export function GetListSettings() {
+  return window['go']['main']['App']['GetListSettings']();
 }
 
 export function GetLocalDrives() {
@@ -66,6 +74,14 @@ export function TestConnection(arg1, arg2) {
   return window['go']['main']['App']['TestConnection'](arg1, arg2);
 }
 
+export function UpdateAllSettings(arg1) {
+  return window['go']['main']['App']['UpdateAllSettings'](arg1);
+}
+
 export function UpdateServer(arg1) {
   return window['go']['main']['App']['UpdateServer'](arg1);
+}
+
+export function UpdateSettings(arg1) {
+  return window['go']['main']['App']['UpdateSettings'](arg1);
 }

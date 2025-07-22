@@ -18,6 +18,7 @@ type App struct {
 	RemoteFile     *handler.RemoteFileHandler     `json:"-"`
 	LocalFile      *handler.LocalFileHandler      `json:"-"`
 	SessionManager *handler.SessionManagerHandler `json:"-"`
+	Settings       *handler.SettingsHandler       `json:"-"`
 
 	cancellableRequests   map[string]context.CancelFunc
 	cancellableRequestsMu sync.Mutex
@@ -30,6 +31,7 @@ func NewApp(db *sql.DB,
 	remoteFile *handler.RemoteFileHandler,
 	localFile *handler.LocalFileHandler,
 	sessionManager *handler.SessionManagerHandler,
+	settings *handler.SettingsHandler,
 ) *App {
 	return &App{
 		db:                  db,
@@ -38,6 +40,7 @@ func NewApp(db *sql.DB,
 		RemoteFile:          remoteFile,
 		LocalFile:           localFile,
 		SessionManager:      sessionManager,
+		Settings:            settings,
 		cancellableRequests: make(map[string]context.CancelFunc),
 	}
 }
@@ -56,6 +59,25 @@ func (a *App) Startup(ctx context.Context) {
 		}
 		appLog.Debug().Msg("Table migrated successfully")
 	}
+
+	// Migrate settings tables and insert default settings
+	if a.Settings != nil {
+		err := a.Settings.Migrate(ctx)
+		if err != nil {
+			appLog.Error().Err(err).Msg("Error when migrate settings table")
+		} else {
+			appLog.Debug().Msg("Settings table migrated successfully")
+		}
+
+		// Insert default settings if not already present
+		err = a.Settings.InsertDefaultSettings(ctx)
+		if err != nil {
+			appLog.Error().Err(err).Msg("Error inserting default settings")
+		} else {
+			appLog.Debug().Msg("Default settings inserted successfully")
+		}
+	}
+
 }
 
 func (a *App) Shutdown(ctx context.Context) {
@@ -165,4 +187,22 @@ func (a *App) CloseSession(sessionID string) error {
 
 func (a *App) CloseAllSession() {
 	a.SessionManager.CloseAllSession()
+}
+
+// Setting handler
+
+func (a *App) UpdateSettings(settings *dto.SettingsRequestDto) (*dto.SettingsResponseDto, error) {
+	return a.Settings.UpdateSettings(a.ctx, settings)
+}
+
+func (a *App) GetListSettings() ([]*dto.SettingsResponseDto, error) {
+	return a.Settings.GetListSettings(a.ctx)
+}
+
+func (a *App) FindSettingsByKey(key string) (*dto.SettingsResponseDto, error) {
+	return a.Settings.FindByKey(a.ctx, key)
+}
+
+func (a *App) UpdateAllSettings(settings []*dto.SettingsRequestDto) error {
+	return a.Settings.UpdateAllSettings(a.ctx, settings)
 }

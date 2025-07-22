@@ -46,10 +46,11 @@ func InitLogger() {
 	}
 
 	multiWriter := io.MultiWriter(consoleWriter, fileWriter)
-	
+
 	appLogger = zerolog.New(multiWriter).
 		Level(zerolog.DebugLevel).
 		With().
+		CallerWithSkipFrameCount(2).
 		Timestamp().
 		Logger()
 
