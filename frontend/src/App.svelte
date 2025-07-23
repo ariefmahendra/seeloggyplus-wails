@@ -463,4 +463,4 @@
 <ServerManagementModal bind:isOpen={showServerModal}/>
 
 <!-- Settings Modal -->
-<SettingsModal bind:isOpen={showSettingsModal}/>
+<SettingsModal bind:isOpen={showSettingsModal} />
