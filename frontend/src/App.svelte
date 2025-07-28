@@ -18,14 +18,25 @@
         SideNavItems,
         SideNavLink,
         Tag,
-        TextInput,
-        Toggle
+        TextInput
     } from 'carbon-components-svelte';
 
-    import {Add, DocumentView, Filter, Pause, Play, ServerProxy, Settings, TrashCan, ConnectionSignal} from 'carbon-icons-svelte';
+    import {
+        Add,
+        CloudLogging,
+        DocumentView,
+        Filter,
+        Pause,
+        Play,
+        ServerProxy,
+        Settings,
+        TrashCan
+    } from 'carbon-icons-svelte';
 
     import ServerManagementModal from './modules/servers/ServerManagementModal.svelte'
     import SettingsModal from "./modules/settings/SettingsModal.svelte";
+    import FileExplorer from "./modules/explorer/FileExplorer.svelte";
+    import {activePage} from "./store/store";
 
     // Types
     interface LogEntry {
@@ -235,7 +246,13 @@
                 icon={Add}
                 iconDescription="Add Log File"
                 tooltipAlignment="end"
-                on:click={() => showAddFileModal = true}
+                on:click={() => activePage.set('explorer')}
+        />
+        <HeaderGlobalAction
+                icon={CloudLogging}
+                iconDescription="Log View"
+                tooltipAlignment="end"
+                on:click={() => activePage.set('logView')}
         />
         <HeaderGlobalAction
                 iconDescription="Server Management"
@@ -244,53 +261,20 @@
                 on:click={() => showServerModal = !showServerModal}
         />
         <HeaderGlobalAction
-            icon={Settings}
-            iconDescription="Settings"
-            tooltipAlignment="end"
-            on:click={() => showSettingsModal = !showSettingsModal}
+                icon={Settings}
+                iconDescription="Settings"
+                tooltipAlignment="end"
+                on:click={() => showSettingsModal = !showSettingsModal}
         />
     </HeaderUtilities>
 </Header>
 
-<!-- Sidebar for File Management -->
-<SideNav bind:isOpen={isSideNavOpen}>
-    <SideNavItems>
-        <div class="p-4 font-semibold text-gray-600 border-b border-gray-200">
-            Open Files ({openFiles.length})
-        </div>
-
-        {#each openFiles as file (file.id)}
-            <SideNavLink
-                    text={file.name}
-                    isSelected={file.isActive}
-                    on:click={() => switchToFile(file.id)}
-            >
-                <div class="flex justify-between items-center w-full">
-                    <div class="flex flex-col">
-                        <span class="text-sm font-medium">{file.name}</span>
-                        <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
-                    </div>
-                    <Button
-                            kind="ghost"
-                            size="small"
-                            iconDescription="Remove file"
-                            icon={TrashCan}
-                    />
-                </div>
-            </SideNavLink>
-        {/each}
-
-        {#if openFiles.length === 0}
-            <div class="p-4 text-gray-500 italic">
-                No files open
-            </div>
-        {/if}
-    </SideNavItems>
-</SideNav>
-
-<!-- Main Content -->
-<Content id="main-content">
-    <div class="p-6">
+{#if ($activePage === 'explorer')}
+    <Content id="main-content">
+        <FileExplorer/>
+    </Content>
+{:else if ($activePage === 'logView')}
+    <Content id="main-content">
         <!-- Control Panel -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 p-4">
             <div class="flex gap-4 items-center flex-wrap">
@@ -408,8 +392,44 @@
                 </div>
             {/if}
         </div>
-    </div>
-</Content>
+    </Content>
+
+    <!-- Sidebar for File Management -->
+    <SideNav bind:isOpen={isSideNavOpen}>
+        <SideNavItems>
+            <div class="p-4 font-semibold text-gray-600 border-b border-gray-200">
+                Open Files ({openFiles.length})
+            </div>
+
+            {#each openFiles as file (file.id)}
+                <SideNavLink
+                        text={file.name}
+                        isSelected={file.isActive}
+                        on:click={() => switchToFile(file.id)}
+                >
+                    <div class="flex justify-between items-center w-full">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium">{file.name}</span>
+                            <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                        </div>
+                        <Button
+                                kind="ghost"
+                                size="small"
+                                iconDescription="Remove file"
+                                icon={TrashCan}
+                        />
+                    </div>
+                </SideNavLink>
+            {/each}
+
+            {#if openFiles.length === 0}
+                <div class="p-4 text-gray-500 italic">
+                    No files open
+                </div>
+            {/if}
+        </SideNavItems>
+    </SideNav>
+{/if}
 
 <!-- Log Detail Modal -->
 <Modal
@@ -440,27 +460,8 @@
     {/if}
 </Modal>
 
-<!-- Add File Modal -->
-<Modal
-        bind:open={showAddFileModal}
-        modalHeading="Add Log File"
-        primaryButtonText="Add File"
-        secondaryButtonText="Cancel"
-        on:click:button--primary={addLogFile}
-        on:click:button--secondary={() => showAddFileModal = false}
->
-    <div class="space-y-4">
-        <TextInput
-                labelText="File Path"
-                placeholder="/var/log/application.log"
-                bind:value={newFilePath}
-                helperText="Enter the full path to the log file"
-        />
-    </div>
-</Modal>
-
 <!-- Server Management Modal -->
 <ServerManagementModal bind:isOpen={showServerModal}/>
 
 <!-- Settings Modal -->
-<SettingsModal bind:isOpen={showSettingsModal} />
+<SettingsModal bind:isOpen={showSettingsModal}/>
