@@ -1,5 +1,5 @@
 
-export interface File {
+export interface FileInfoMapping {
     id: number,
     name: string,
     size: number,

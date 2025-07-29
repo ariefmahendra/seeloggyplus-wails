@@ -1,447 +1,200 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
-    import {
-        ConnectSession,
-        GetListSession,
-        GetLocalDrives,
-        GetLocalUserHomeDir,
-        GetRemoteListFiles,
-        ListLocalFiles
-    } from '../../../wailsjs/go/main/App';
-    import {dto} from '../../../wailsjs/go/models';
+    import { ListLocalFiles, GetLocalDrives } from '../../../wailsjs/go/main/App';
+    import { Button, DataTable, CodeSnippet } from "carbon-components-svelte";
+    import { onMount } from "svelte";
+    import { dto } from "../../../wailsjs/go/models";
+    import { ArrowUp } from "carbon-icons-svelte";
 
-    import {
-        Breadcrumb,
-        BreadcrumbItem,
-        Button,
-        DataTable,
-        InlineNotification,
-        Search,
-        Tab,
-        Tabs
-    } from 'carbon-components-svelte';
-
-    import {ArrowLeft, BareMetalServer, FileStorage, Home, Restart} from 'carbon-icons-svelte';
-    import type {File} from "./types/types";
-
-    // State variables
-    let currentPath = '';
-    let isRemote = false;
-    let selectedSessionId = '';
-    let drives: dto.DriveInfo[] = [];
-    let sessions: dto.SessionManagerDto[] = [];
-    let loading = false;
-    let error = '';
-    let searchValue = '';
-    let selectedTab = 0;
-    let files: File[] = [];
-
-    $: rows = [];
-
-    const headerDataTable = [
-        {key: 'Name', value: 'name'},
-        {key: 'Size', value: 'size'},
-        {key: 'Type', value: 'type'},
-        {key: 'Mode', value: 'mode'},
-        {key: 'Modified', value: 'modTime'}
-    ];
-
-    $: pathParts = currentPath ? currentPath.split(/[\/\\]/).filter(Boolean) : [];
-
-    // Lifecycle
-    onMount(async () => {
-        console.log('FileExplorer mounted');
-        await initializeExplorer();
-    });
-
-    async function initializeExplorer() {
-        try {
-            await loadSessions();
-            if (!isRemote) {
-                await loadLocalDrives();
-                await loadUserHome();
-            }
-        } catch (err) {
-            console.error('Failed to initialize explorer:', err);
-            error = `Initialization failed: ${err}`;
-        }
+    // Interface untuk memetakan data dari backend Go
+    // Menambahkan 'path' untuk menyimpan path lengkap demi kemudahan navigasi
+    interface FileInfoMapping {
+        id: number;
+        name: string;
+        path: string; // Menyimpan path lengkap (e.g., "C:\" atau "C:\Users")
+        size: number;
+        modified: any;
+        type: 'Directory' | 'File' | 'Drive';
+        isDir: boolean;
+        mode: any;
     }
 
-    // API Functions
-    async function loadSessions() {
-        try {
-            sessions = await GetListSession();
-            console.log('Sessions loaded:', sessions);
-        } catch (err) {
-            console.error('Failed to load sessions:', err);
-            error = `Failed to load sessions: ${err}`;
-        }
+    let files: FileInfoMapping[] = [];
+    // Path kosong ("") diinterpretasikan sebagai permintaan untuk menampilkan daftar drive.
+    let currentPath: string = '';
+    let isLoading: boolean = true;
+    let errorMessage: string = '';
+
+    // Statement reaktif Svelte: akan berjalan setiap kali `currentPath` berubah.
+    $: if (currentPath !== undefined) {
+        loadListFiles(currentPath);
     }
 
-    async function loadLocalDrives() {
+    // Variabel reaktif untuk menonaktifkan tombol "Kembali" saat di level daftar drive.
+    $: isAtRoot = currentPath === '';
+
+    /**
+     * Memuat daftar file atau drive dari backend Wails.
+     * @param path - Jika string kosong (""), fungsi akan memanggil GetLocalDrives().
+     * Jika tidak, akan memanggil ListLocalFiles(path).
+     */
+    async function loadListFiles(path: string) {
+        isLoading = true;
+        errorMessage = '';
         try {
-            drives = await GetLocalDrives();
-            console.log('Drives loaded:', drives);
-        } catch (err) {
-            console.error('Failed to load drives:', err);
-            error = `Failed to load drives: ${err}`;
-        }
-    }
+            if (path === '') {
+                // KASUS 1: Memuat daftar drive saat path kosong (tampilan awal)
+                const driveInfos: dto.DriveInfo[] = await GetLocalDrives();
+                files = driveInfos.map((drive, i) => ({
+                    id: i,
+                    name: `${drive.label || drive.name} (${drive.name})`, // Tampilkan label dan nama drive
+                    path: drive.path, // Gunakan path dari DTO, e.g., "C:\"
+                    size: 0,
+                    modified: 'N/A',
+                    type: 'Drive',
+                    isDir: true, // Semua drive dianggap direktori
+                    mode: null,
+                }));
+            } else {
+                // KASUS 2: Memuat file dan folder dari path tertentu
+                const fileInfos: dto.FileInfo[] = await ListLocalFiles(path);
+                files = fileInfos.map((fileInfo, i) => {
+                    // Gabungkan path saat ini dengan nama file/folder untuk navigasi selanjutnya
+                    let basePath = path;
+                    if (basePath.endsWith(':')) {
+                        basePath += '/';
+                    }
+                    const fullPath = [basePath.replace(/\/$/, ''), fileInfo.name].join('/');
 
-    async function loadUserHome() {
-        try {
-            if (!currentPath) {
-                currentPath = await GetLocalUserHomeDir();
-                console.log('User home loaded:', currentPath);
-                await loadFiles();
-            }
-        } catch (err) {
-            console.error('Failed to load user home:', err);
-            error = `Failed to load user home: ${err}`;
-        }
-    }
-
-    async function loadFiles() {
-        if (!currentPath && !isRemote) return;
-
-        loading = true;
-        error = '';
-
-        try {
-            files = [];
-            console.log('Loading files for path:', currentPath, 'isRemote:', isRemote);
-
-            let fileInfos: dto.FileInfo[];
-            if (isRemote && selectedSessionId) {
-                fileInfos = await GetRemoteListFiles(selectedSessionId, currentPath || '/');
-            } else if (!isRemote && currentPath) {
-                fileInfos = await ListLocalFiles(currentPath);
-            }
-
-            let i: number = 0;
-            fileInfos.forEach((file: dto.FileInfo) => {
-                files.push({
-                    id: i++,
-                    name: file.name,
-                    type: file.isDir ? 'Directory' : file.name.split('.').pop() || 'Unknown',
-                    size: file.size,
-                    modified: file.modTime,
-                    mode: file.mode,
+                    return {
+                        id: i,
+                        name: fileInfo.name,
+                        path: fullPath, // Simpan path lengkap
+                        size: fileInfo.size,
+                        modified: fileInfo.modTime ? new Date(fileInfo.modTime).toLocaleString() : 'N/A',
+                        type: fileInfo.isDir ? 'Directory' : 'File',
+                        isDir: fileInfo.isDir,
+                        mode: fileInfo.mode,
+                    };
                 });
-            })
-
-            rows = files;
-
-            console.log('Files loaded:', files);
-        } catch (err) {
-            console.error('Failed to load files:', err);
-            error = `Failed to load files: ${err}`;
-            files = [];
-        } finally {
-            loading = false;
-        }
-    }
-
-    // Event Handlers
-    function handleTabChange(event: CustomEvent) {
-        const newTab = event.detail.selected;
-        console.log('Tab changed to:', newTab);
-
-        if (newTab !== selectedTab) {
-            selectedTab = newTab;
-            isRemote = selectedTab === 1;
-            currentPath = '';
-            selectedSessionId = '';
-            files = [];
-            error = '';
-            searchValue = '';
-
-            if (!isRemote) {
-                loadUserHome();
             }
-        }
-    }
-
-    function handleFileClick(file: dto.FileInfo) {
-        console.log('File clicked:', file);
-        if (file.isDir) {
-            currentPath = file.path;
-            loadFiles();
-        }
-    }
-
-    function handleDriveClick(drive: dto.DriveInfo) {
-        console.log('Drive clicked:', drive);
-        currentPath = drive.path;
-        loadFiles();
-    }
-
-    function navigateUp() {
-        if (!currentPath || currentPath === '/') return;
-
-        const separator = currentPath.includes('\\') ? '\\' : '/';
-        const pathParts = currentPath.split(separator).filter(Boolean);
-
-        if (pathParts.length > 1) {
-            currentPath = separator + pathParts.slice(0, -1).join(separator);
-        } else {
-            currentPath = isRemote ? '/' : '';
-        }
-
-        loadFiles();
-    }
-
-    function navigateHome() {
-        if (isRemote) {
-            currentPath = '/';
-        } else {
-            loadUserHome();
-        }
-    }
-
-    function refreshFiles() {
-        loadFiles();
-    }
-
-    function navigateToBreadcrumb(index: number) {
-        let newPath: string;
-        const partsToJoin: string[] = pathParts.slice(0, index + 1);
-
-        partsToJoin.forEach(part => {
-            if (part) {
-                newPath = newPath ? newPath + '/' + part : part;
-            }
-        })
-
-        currentPath = newPath;
-        loadFiles();
-    }
-
-    // Session handling
-    async function connectToSession(sessionId: string) {
-        try {
-            loading = true;
-            await ConnectSession(sessionId);
-            selectedSessionId = sessionId;
-            currentPath = '/';
-            await loadFiles();
-        } catch (err) {
-            error = `Failed to connect to session: ${err}`;
+        } catch (error) {
+            console.error("Failed to load items:", error);
+            errorMessage = `Gagal memuat dari path: '${path || 'Drives'}'. Error: ${error}`;
+            // Jika gagal, coba kembali ke direktori induk
+            currentPath = getParentDirectory(currentPath);
         } finally {
-            loading = false;
+            isLoading = false;
         }
     }
 
-    // Utility Functions
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-    }
+    /**
+     * Menangani event klik pada baris tabel. Navigasi terjadi berdasarkan 'path' yang tersimpan.
+     */
+    function handleRowClick(event: CustomEvent<FileInfoMapping>) {
+        const clickedItem = event.detail;
 
-    function formatDate(dateString) {
-        if (!dateString) return '—';
-        try {
-            return new Date(dateString).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch {
-            return dateString;
+        // Hanya navigasi jika item yang diklik adalah direktori atau drive
+        if (clickedItem.isDir) {
+            // Langsung gunakan path yang sudah lengkap dari item yang diklik
+            currentPath = clickedItem.path;
+        } else {
+            // Logika untuk file (misalnya membuka file) bisa ditambahkan di sini
+            console.log("File clicked:", clickedItem.path);
         }
     }
+
+    /**
+     * Menghitung path direktori induk.
+     * Contoh: "C:/Users/Test" -> "C:/Users" -> "C:" -> "" (daftar drive)
+     */
+    function getParentDirectory(path: string): string {
+        if (path === '' || path === null) {
+            return ''; // Sudah di level tertinggi
+        }
+
+        // Normalisasi backslash menjadi forward slash untuk konsistensi
+        const normalizedPath = path.replace(/\\/g, '/').replace(/\/$/, ''); // Hapus slash di akhir
+
+        // Jika path adalah drive (e.g., "C:"), induknya adalah daftar drive
+        if (normalizedPath.length === 2 && normalizedPath.endsWith(':')) {
+            return '';
+        }
+
+        const lastSlashIndex = normalizedPath.lastIndexOf('/');
+
+        // Jika tidak ada slash atau hanya ada satu di root (e.g., "/"), kembali ke drive
+        if (lastSlashIndex <= 0) {
+            return normalizedPath.substring(0, 2); // "C:"
+        }
+
+        // Potong string sampai sebelum slash terakhir
+        return normalizedPath.substring(0, lastSlashIndex);
+    }
+
+    /**
+     * Fungsi untuk tombol "Up" / "Kembali".
+     */
+    function goUp() {
+        if (!isAtRoot) {
+            currentPath = getParentDirectory(currentPath);
+        }
+    }
+
 </script>
 
-<div class="w-full h-[90vh] flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden gap-2">
-    <!-- Header with Tabs -->
-    <div class="border-b border-gray-200 flex-shrink-0">
-        <Tabs bind:selected={selectedTab} on:change={handleTabChange}>
-            <Tab>
-                <div class="flex items-center gap-2">
-                    <FileStorage size={16}/>
-                    Local Storage
-                </div>
-            </Tab>
-            <Tab>
-                <div class="flex items-center gap-2">
-                    <BareMetalServer size={16}/>
-                    Remote Server
-                </div>
-            </Tab>
-        </Tabs>
-    </div>
+<div class="p-4 bg-gray-100 min-h-screen font-sans">
+    <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-4">File Browser</h1>
 
-    <!-- Toolbar -->
-    <div class="border-b border-gray-200 flex-shrink-0 flex justify-between items-center">
-        <div>
+        <!-- Kontrol Navigasi -->
+        <div class="flex justify-between items-center mb-4 p-2 bg-gray-50 rounded-md">
+            <!-- Tombol Kembali -->
             <Button
                     kind="ghost"
-                    size="small"
-                    icon={ArrowLeft}
-                    disabled={!currentPath || currentPath === '/'}
-                    on:click={navigateUp}
-            />
+                    icon={ArrowUp}
+                    on:click={goUp}
+                    disabled={isAtRoot || isLoading}
+            >
+                Up
+            </Button>
 
-            <Button
-                    kind="ghost"
-                    size="small"
-                    icon={Home}
-                    on:click={navigateHome}
-            />
+            <!-- Tampilan Path Saat Ini -->
+            <div class="flex-grow mx-4">
+                <CodeSnippet type="single" wrapText={true}>
+                    {currentPath || 'Daftar Drive'}
+                </CodeSnippet>
+            </div>
+        </div>
 
-            <Button
-                    kind="ghost"
-                    size="small"
-                    icon={Restart}
-                    on:click={refreshFiles}
-                    disabled={loading}
-            />
+        <!-- Pesan Error -->
+        {#if errorMessage}
+            <div class="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+                <span class="font-medium">Error!</span> {errorMessage}
+            </div>
+        {/if}
 
-            <!-- Breadcrumb -->
-            {#if currentPath}
-                <Breadcrumb noTrailingSlash class="p-2">
-                    {#each pathParts as part, index}
-                        <BreadcrumbItem
-                                on:click={() => navigateToBreadcrumb(index)}
-                                class="cursor-pointer hover:text-blue-600"
-                        >
-                            <span class="text-sm" title={part}>{part}</span>
-                        </BreadcrumbItem>
-                    {/each}
-                </Breadcrumb>
+        <!-- Tabel Data -->
+        <div class="overflow-x-auto">
+            {#if isLoading}
+                <p class="text-center p-8">Loading...</p>
+            {:else}
+                <DataTable
+                        stickyHeader
+                        size="compact"
+                        headers={[
+                        {key: 'name', value: 'Name'},
+                        {key: 'size', value: 'Size (bytes)'},
+                        {key: 'modified', value: 'Last Modified'},
+                        {key: 'type', value: 'Type'},
+                    ]}
+                        rows={files}
+                        on:click:row={handleRowClick}
+                        sortable
+                />
+                {#if files.length === 0 && !isLoading}
+                    <p class="text-center text-gray-500 p-8">Direktori ini kosong.</p>
+                {/if}
             {/if}
-        </div>
-        <div>
-            <Search/>
-        </div>
-    </div>
-
-    <!-- Session Selection for Remote -->
-    {#if isRemote}
-        <div class="p-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-            <div class="flex items-center gap-3">
-                <span class="text-sm font-medium">Remote Session:</span>
-                <div class="flex flex-wrap gap-2">
-                    {#if sessions.length === 0}
-                        <span class="text-sm text-gray-500">No sessions available</span>
-                    {:else}
-                        {#each sessions as session}
-                            <Button
-                                    kind={selectedSessionId === session.id ? "primary" : "tertiary"}
-                                    size="small"
-                                    on:click={() => connectToSession(session.id)}
-                            >
-                                {session.serverInfo?.name || session.id}
-                            </Button>
-                        {/each}
-                    {/if}
-                </div>
-            </div>
-        </div>
-    {/if}
-
-    <!-- Drives Section (Local only) -->
-    {#if !isRemote && drives.length > 0}
-        <div class="p-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-            <div class="text-sm font-medium text-gray-700 mb-2">Available Drives</div>
-            <div class="flex flex-wrap gap-2">
-                {#each drives as drive}
-                    <Button
-                            kind="tertiary"
-                            size="small"
-                            on:click={() => handleDriveClick(drive)}
-                    >
-                        <div class="flex items-center gap-2">
-                            <FileStorage size={16}/>
-                            <span>{drive.label || drive.name} ({drive.path})</span>
-                        </div>
-                    </Button>
-                {/each}
-            </div>
-        </div>
-    {/if}
-
-    <!-- Error Message -->
-    {#if error}
-        <div class="p-3 flex-shrink-0">
-            <InlineNotification
-                    kind="error"
-                    title="Error"
-                    subtitle={error}
-                    on:close={() => error = ''}
-            />
-        </div>
-    {/if}
-
-    <div>
-        <DataTable
-                stickyHeader
-                class="overflow-auto"
-                headers={[
-                { key: 'name', value: 'Name', empty: false},
-                { key: 'size', value: 'Size', empty: false},
-                { key: 'type', value: 'Type', empty: false},
-                { key: 'mode', value: 'Mode', empty: false},
-                { key: 'modified', value: 'Modified', empty: false}
-            ]}
-                rows={rows}
-                size="short"
-                zebra
-        />
-    </div>
-
-
-    <!-- Files List -->
-    <!--    <div class="flex-1 overflow-auto">-->
-    <!--        {#if loading}-->
-    <!--            <div class="h-32 flex items-center justify-center">-->
-    <!--                <div class="text-center">-->
-    <!--                    <Loading withOverlay={false}/>-->
-    <!--                    <p class="mt-2 text-sm text-gray-600">Loading files...</p>-->
-    <!--                </div>-->
-    <!--            </div>-->
-    <!--        {:else if filteredFiles.length === 0}-->
-    <!--            <div class="h-32 flex flex-col items-center justify-center text-gray-500">-->
-    <!--                <FolderOpen size={32} class="mb-2 text-gray-300"/>-->
-    <!--                {#if !currentPath && !selectedSessionId}-->
-    <!--                    <p class="text-sm">Select a location to browse files</p>-->
-    <!--                {:else if searchValue}-->
-    <!--                    <p class="text-sm">No files match your search</p>-->
-    <!--                {:else}-->
-    <!--                    <p class="text-sm">This folder is empty</p>-->
-    <!--                {/if}-->
-    <!--            </div>-->
-    <!--        {:else}-->
-    <!--            <div class="divide-y divide-gray-100">-->
-    <!--                {#each filteredFiles as file}-->
-    <!--                    <FileItem {file} on:click={(e) => handleFileClick(e.detail)}/>-->
-    <!--                {/each}-->
-    <!--            </div>-->
-    <!--        {/if}-->
-    <!--    </div>-->
-
-    <!-- Status Bar -->
-    <div class="border-t border-gray-200 px-3 py-2 bg-gray-50 flex-shrink-0">
-        <div class="flex items-center justify-between text-xs text-gray-600">
-            <div class="flex items-center gap-4">
-                <span>{files.length} items</span>
-                {#if currentPath}
-          <span class="font-mono text-xs bg-white px-2 py-1 rounded border">
-            {currentPath}
-          </span>
-                {/if}
-            </div>
-            <div class="flex items-center gap-2">
-                <span>{isRemote ? 'Remote' : 'Local'}</span>
-                {#if selectedSessionId}
-                    <span class="text-green-600">Connected</span>
-                {/if}
-            </div>
         </div>
     </div>
 </div>
