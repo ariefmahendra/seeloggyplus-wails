@@ -49,7 +49,7 @@ func (l localFileUCImpl) List(path string) ([]dto.FileInfo, error) {
 			Name:    info.Name(),
 			Size:    info.Size(),
 			IsDir:   info.IsDir(),
-			ModTime: info.ModTime().String(),
+			ModTime: info.ModTime().Format("2006-01-02 15:04:05"),
 			Mode:    info.Mode().String(),
 			Path:    fullPath,
 		}

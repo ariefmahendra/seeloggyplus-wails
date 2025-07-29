@@ -14,32 +14,37 @@
         Breadcrumb,
         BreadcrumbItem,
         Button,
+        DataTable,
         InlineNotification,
-        Loading,
         Search,
         Tab,
         Tabs
     } from 'carbon-components-svelte';
 
-    import {ArrowLeft, BareMetalServer, FileStorage, FolderOpen, Home, Restart} from 'carbon-icons-svelte';
-    import FileItem from "./FileItem.svelte";
+    import {ArrowLeft, BareMetalServer, FileStorage, Home, Restart} from 'carbon-icons-svelte';
+    import type {File} from "./types/types";
 
     // State variables
     let currentPath = '';
     let isRemote = false;
     let selectedSessionId = '';
-    let files: dto.FileInfo[] = [];
     let drives: dto.DriveInfo[] = [];
     let sessions: dto.SessionManagerDto[] = [];
     let loading = false;
     let error = '';
     let searchValue = '';
     let selectedTab = 0;
+    let files: File[] = [];
 
-    // Reactive statements
-    $: filteredFiles = files.filter(file =>
-        file.name.toLowerCase().includes(searchValue.toLowerCase())
-    );
+    $: rows = [];
+
+    const headerDataTable = [
+        {key: 'Name', value: 'name'},
+        {key: 'Size', value: 'size'},
+        {key: 'Type', value: 'type'},
+        {key: 'Mode', value: 'mode'},
+        {key: 'Modified', value: 'modTime'}
+    ];
 
     $: pathParts = currentPath ? currentPath.split(/[\/\\]/).filter(Boolean) : [];
 
@@ -103,13 +108,29 @@
         error = '';
 
         try {
+            files = [];
             console.log('Loading files for path:', currentPath, 'isRemote:', isRemote);
 
+            let fileInfos: dto.FileInfo[];
             if (isRemote && selectedSessionId) {
-                files = await GetRemoteListFiles(selectedSessionId, currentPath || '/');
+                fileInfos = await GetRemoteListFiles(selectedSessionId, currentPath || '/');
             } else if (!isRemote && currentPath) {
-                files = await ListLocalFiles(currentPath);
+                fileInfos = await ListLocalFiles(currentPath);
             }
+
+            let i: number = 0;
+            fileInfos.forEach((file: dto.FileInfo) => {
+                files.push({
+                    id: i++,
+                    name: file.name,
+                    type: file.isDir ? 'Directory' : file.name.split('.').pop() || 'Unknown',
+                    size: file.size,
+                    modified: file.modTime,
+                    mode: file.mode,
+                });
+            })
+
+            rows = files;
 
             console.log('Files loaded:', files);
         } catch (err) {
@@ -122,7 +143,7 @@
     }
 
     // Event Handlers
-    function handleTabChange(event) {
+    function handleTabChange(event: CustomEvent) {
         const newTab = event.detail.selected;
         console.log('Tab changed to:', newTab);
 
@@ -141,7 +162,7 @@
         }
     }
 
-    function handleFileClick(file) {
+    function handleFileClick(file: dto.FileInfo) {
         console.log('File clicked:', file);
         if (file.isDir) {
             currentPath = file.path;
@@ -149,7 +170,7 @@
         }
     }
 
-    function handleDriveClick(drive) {
+    function handleDriveClick(drive: dto.DriveInfo) {
         console.log('Drive clicked:', drive);
         currentPath = drive.path;
         loadFiles();
@@ -182,31 +203,22 @@
         loadFiles();
     }
 
-    function navigateToBreadcrumb(index) {
-        let newPath;
+    function navigateToBreadcrumb(index: number) {
+        let newPath: string;
+        const partsToJoin: string[] = pathParts.slice(0, index + 1);
 
-        if (index === -1) {
-            newPath = isRemote ? '/' : '';
-        } else {
-            const separator = currentPath.includes('\\') ? '\\' : '/';
-            const partsToJoin = pathParts.slice(0, index + 1);
-
-            if (!isRemote && partsToJoin.length > 0 && /^[a-zA-Z]:$/.test(partsToJoin[0])) {
-                newPath = partsToJoin.join(separator);
-            } else {
-                const pathSuffix = partsToJoin.join(separator);
-                newPath = isRemote ? separator + pathSuffix : pathSuffix;
+        partsToJoin.forEach(part => {
+            if (part) {
+                newPath = newPath ? newPath + '/' + part : part;
             }
-        }
-
-        console.log('Navigating to breadcrumb with new path:', newPath);
+        })
 
         currentPath = newPath;
         loadFiles();
     }
 
     // Session handling
-    async function connectToSession(sessionId) {
+    async function connectToSession(sessionId: string) {
         try {
             loading = true;
             await ConnectSession(sessionId);
@@ -366,40 +378,58 @@
         </div>
     {/if}
 
-    <!-- Files List -->
-    <div class="flex-1 overflow-auto">
-        {#if loading}
-            <div class="h-32 flex items-center justify-center">
-                <div class="text-center">
-                    <Loading withOverlay={false}/>
-                    <p class="mt-2 text-sm text-gray-600">Loading files...</p>
-                </div>
-            </div>
-        {:else if filteredFiles.length === 0}
-            <div class="h-32 flex flex-col items-center justify-center text-gray-500">
-                <FolderOpen size={32} class="mb-2 text-gray-300"/>
-                {#if !currentPath && !selectedSessionId}
-                    <p class="text-sm">Select a location to browse files</p>
-                {:else if searchValue}
-                    <p class="text-sm">No files match your search</p>
-                {:else}
-                    <p class="text-sm">This folder is empty</p>
-                {/if}
-            </div>
-        {:else}
-            <div class="divide-y divide-gray-100">
-                {#each filteredFiles as file}
-                    <FileItem {file} on:click={(e) => handleFileClick(e.detail)}/>
-                {/each}
-            </div>
-        {/if}
+    <div>
+        <DataTable
+                stickyHeader
+                class="overflow-auto"
+                headers={[
+                { key: 'name', value: 'Name', empty: false},
+                { key: 'size', value: 'Size', empty: false},
+                { key: 'type', value: 'Type', empty: false},
+                { key: 'mode', value: 'Mode', empty: false},
+                { key: 'modified', value: 'Modified', empty: false}
+            ]}
+                rows={rows}
+                size="short"
+                zebra
+        />
     </div>
+
+
+    <!-- Files List -->
+    <!--    <div class="flex-1 overflow-auto">-->
+    <!--        {#if loading}-->
+    <!--            <div class="h-32 flex items-center justify-center">-->
+    <!--                <div class="text-center">-->
+    <!--                    <Loading withOverlay={false}/>-->
+    <!--                    <p class="mt-2 text-sm text-gray-600">Loading files...</p>-->
+    <!--                </div>-->
+    <!--            </div>-->
+    <!--        {:else if filteredFiles.length === 0}-->
+    <!--            <div class="h-32 flex flex-col items-center justify-center text-gray-500">-->
+    <!--                <FolderOpen size={32} class="mb-2 text-gray-300"/>-->
+    <!--                {#if !currentPath && !selectedSessionId}-->
+    <!--                    <p class="text-sm">Select a location to browse files</p>-->
+    <!--                {:else if searchValue}-->
+    <!--                    <p class="text-sm">No files match your search</p>-->
+    <!--                {:else}-->
+    <!--                    <p class="text-sm">This folder is empty</p>-->
+    <!--                {/if}-->
+    <!--            </div>-->
+    <!--        {:else}-->
+    <!--            <div class="divide-y divide-gray-100">-->
+    <!--                {#each filteredFiles as file}-->
+    <!--                    <FileItem {file} on:click={(e) => handleFileClick(e.detail)}/>-->
+    <!--                {/each}-->
+    <!--            </div>-->
+    <!--        {/if}-->
+    <!--    </div>-->
 
     <!-- Status Bar -->
     <div class="border-t border-gray-200 px-3 py-2 bg-gray-50 flex-shrink-0">
         <div class="flex items-center justify-between text-xs text-gray-600">
             <div class="flex items-center gap-4">
-                <span>{filteredFiles.length} items</span>
+                <span>{files.length} items</span>
                 {#if currentPath}
           <span class="font-mono text-xs bg-white px-2 py-1 rounded border">
             {currentPath}
